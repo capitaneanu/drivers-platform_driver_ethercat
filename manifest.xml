@@ -1,0 +1,12 @@
+<package>
+  <description brief="Driver for all platform motors">
+  This library interfaces with all the motors in the platform implementing the CANopen protocol.
+  </description>
+  <author>Martin Azkarate/Martin.Azkarate@esa.int</author>
+  <license>GPL v2 or later</license>
+  <url>http://www.esa.int/TEC/Robotics/</url>
+  <logo>http://</logo>
+
+  <depend package="drivers/pcan_pcie_mini" optional="1" />
+
+</package>
