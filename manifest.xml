@@ -7,6 +7,7 @@
   <url>http://www.esa.int/TEC/Robotics/</url>
   <logo>http://</logo>
 
+  <depend package="base/cmake" />
   <depend package="drivers/pcan_pcie_mini" optional="1" />
 
 </package>
