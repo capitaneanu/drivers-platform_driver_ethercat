@@ -113,6 +113,7 @@ enum MotorStatus {INACTIVE, ACTIVE};
 /**
  * List of all can nodes in the platform.
  * Include groups of nodes in order to create a Drive class object to address them altogether.
+ * ToDo: Try to remove the dependency of the code from this enumerator as it depends directly in the specific rover.
  */
 enum MotorCANNode
 {
