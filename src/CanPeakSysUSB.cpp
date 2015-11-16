@@ -134,7 +134,7 @@ void CANPeakSysUSB::init(std::string dev)
 
 	// set inteface type and baud rate and then initialize
 	setCanItfType(CAN_PEAK_USB);
-	setCanBaudRate(BAUD_RATE_1M);
+	setCanBaudRate(BAUD_RATE_500K);
 
 	m_bInitialized = initCAN();
 
