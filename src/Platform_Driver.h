@@ -316,6 +316,14 @@ public:
 	 * @return True if the drive is properly shut down.
 	 */
 	bool shutdownNode(int iCanIdent);
+	
+    /**
+	 * Starts the specific Node.
+	 * Enables the motor, check the status.
+	 * @return True if the drive is properly started.
+	 */
+	bool startNode(int iCanIdent);
+
 
 	/**
 	 * Reinitializes the nodes on the bus.

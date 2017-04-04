@@ -743,6 +743,15 @@ bool Platform_Driver::shutdownNode(int iCanIdent)
 }
 
 //-----------------------------------------------
+bool Platform_Driver::startNode(int iCanIdent)
+{
+	bool bRet=true;
+	//* shut down the motor
+	bRet &= m_vpMotor[iCanIdent]->start();
+	return bRet;
+}
+
+//-----------------------------------------------
 bool Platform_Driver::resetPltf()
 {
 	bool bRetMotor = true;
@@ -1178,8 +1187,8 @@ void Platform_Driver::nodePositionSetPointRad(int iCanIdent, double dPosGearRad,
 
 //-----------------------------------------------
 void Platform_Driver::nodeVelocityCommandRadS(int iCanIdent, double dVelGearRadS)
-{		
-	
+{
+
     if (m_vpMotor[iCanIdent]->getTypeMotionVariable() != CanDriveItf::MOTIONTYPE_VELCTRL)
         m_vpMotor[iCanIdent]->setTypeMotion(CanDriveItf::MOTIONTYPE_VELCTRL);
 
@@ -1207,6 +1216,8 @@ void Platform_Driver::nodeCommandSetPoint(int iCanIdent)
 //-----------------------------------------------
 void Platform_Driver::nodeTorqueCommandNm(int iCanIdent, double dTorqueNm)
 {
+    if (m_vpMotor[iCanIdent]->getTypeMotionVariable() != CanDriveItf::MOTIONTYPE_TORQUECTRL)
+        m_vpMotor[iCanIdent]->setTypeMotion(CanDriveItf::MOTIONTYPE_TORQUECTRL);
 
 	m_vpMotor[iCanIdent]->torqueCommandNm(dTorqueNm);
 

@@ -73,6 +73,7 @@
  *
  ****************************************************************/
 
+
 #include "CanDriveWhistle.h"
 
 //-----------------------------------------------
@@ -1288,24 +1289,29 @@ void CanDriveWhistle::requestTorque()
 //-----------------------------------------------
 void CanDriveWhistle::torqueCommandNm(double dTorqueNm)
 {
-	//* convert commanded motor torque into amperes
-	float fMotCurr = m_DriveParam.getSign() * dTorqueNm / m_DriveParam.getCurrToTorque();
-
-	//* check for limitations
-	if  (fMotCurr > m_DriveParam.getCurrMax())
+	if(m_iTypeMotion == MOTIONTYPE_TORQUECTRL)
 	{
-		fMotCurr = m_DriveParam.getCurrMax();
-		std::cout << "Torque command too high: " << fMotCurr << " Amps. Torque has been limited to max current." << std::endl;
-	}
-	if (fMotCurr < -m_DriveParam.getCurrMax())
-	{
-		fMotCurr = -m_DriveParam.getCurrMax();
-		std::cout << "Torque command too high: " << fMotCurr << " Amps. Torque has been limited to min current." << std::endl;
-	}
+		//* convert commanded motor torque into amperes
+		float fMotCurr = m_DriveParam.getSign() * dTorqueNm / m_DriveParam.getCurrToTorque();
 
-	//* send Command
-	m_bTargetReached = false;
-	IntprtSetFloat(8, 'T', 'C', 0, fMotCurr);
+		//* check for limitations
+		if  (fMotCurr > m_DriveParam.getCurrMax())
+		{
+			fMotCurr = m_DriveParam.getCurrMax();
+			std::cout << "Torque command too high: " << fMotCurr << " Amps. Torque has been limited to max current." << std::endl;
+		}
+		if (fMotCurr < -m_DriveParam.getCurrMax())
+		{
+			fMotCurr = -m_DriveParam.getCurrMax();
+			std::cout << "Torque command too high: " << fMotCurr << " Amps. Torque has been limited to min current." << std::endl;
+		}
+
+		//* send Command
+		m_bTargetReached = false;
+		IntprtSetFloat(8, 'T', 'C', 0, fMotCurr);
+	}
+	else
+		std::cout << "CanDriveWhistle::torqueCommand : Torque Command is not allowed in NON torque control mode!" << std::endl;
 }
 
 //-----------------------------------------------
