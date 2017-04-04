@@ -638,8 +638,10 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive, GearMotorParamTyp
 	{
 		m_vpMotor[i]->reset();
 	}
+    /* Not necessary in HDPR because there is no AUTOEXEC code in the Whistles that needs time
 	usleep(10000000); //!Wait for the AUTOEXEC script in the Whistles to finish
-	
+	*/
+
 	//* Initialize and start all motors
 	for (int i = 0; i<m_iNumMotors; i++)
 	{
