@@ -751,7 +751,7 @@ bool CanDriveWhistle::shutdown()
 {
 	bool bRet = true;
 
-	std::cout << "...shutting down drive " << m_sName << std::endl;
+	//std::cout << "...shutting down drive " << m_sName << std::endl;
 
 	IntprtSetInt(8, 'M', 'O', 0, 0);
 	usleep(20000);
@@ -1410,7 +1410,7 @@ bool CanDriveWhistle::evalStatusRegister(int iStatus)
 		{
 			if (m_iMotorState != ST_OPERATION_ENABLED)
 			{
-				std::cout << "Motor " << m_sName << " operation enabled" << std::endl;
+				//std::cout << "Motor " << m_sName << " operation enabled" << std::endl;
 			}
 			m_iNewMotorState = ST_OPERATION_ENABLED;
 		}
@@ -1418,7 +1418,7 @@ bool CanDriveWhistle::evalStatusRegister(int iStatus)
 		{
 			if (m_iMotorState != ST_OPERATION_DISABLED)
 			{
-				std::cout << "Motor " << m_sName << " operation disabled" << std::endl;
+				//std::cout << "Motor " << m_sName << " operation disabled" << std::endl;
 			}
 			m_iNewMotorState = ST_OPERATION_DISABLED;
 		}
@@ -1427,7 +1427,9 @@ bool CanDriveWhistle::evalStatusRegister(int iStatus)
 		if(isBitSet(iStatus, 13))
 		{
 			if (m_bCurrentLimitOn == false)
-				std::cout << "Motor " << m_sName << "current limit on" << std::endl;
+			{
+				//std::cout << "Motor " << m_sName << "current limit on" << std::endl;
+			}
 			m_bCurrentLimitOn = true;
 		}
 		else
