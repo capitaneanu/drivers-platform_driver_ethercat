@@ -159,15 +159,8 @@ std::string TimeStamp::CurrentToString()
 {
 # define TIME_SIZE 400
 
-	const struct tm *tm;
-	size_t len;
-	time_t now;
 	char pres[TIME_SIZE];
 	std::string s;
-
-	now = time ( NULL );
-	tm = localtime ( &now );
-	len = strftime ( pres, TIME_SIZE, "%Y-%m-%d %H:%M:%S.", tm );
 
 	s = (std::string)pres + NumToString(m_TimeStamp.tv_nsec / 1000);
 
@@ -179,14 +172,9 @@ std::string TimeStamp::ToString()
 {
 # define TIME_SIZE 4000
 
-	const struct tm *tm;
-	size_t len;
 	//time_t now;
 	char pres[TIME_SIZE];
 	std::string s;
-
-	tm = localtime ( &m_TimeStamp.tv_sec );
-	len = strftime ( pres, TIME_SIZE, "%Y-%m-%d %H:%M:%S.", tm );
 
 	s = (std::string)pres + NumToString(m_TimeStamp.tv_nsec / 1000);
 	
