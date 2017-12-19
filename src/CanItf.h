@@ -92,7 +92,8 @@ public:
 		CAN_PEAK_USB = 1,
 		CAN_ESD = 2,
 		CAN_DUMMY = 3,
-		CAN_BECKHOFF = 4
+		CAN_BECKHOFF = 4,
+		CAN_ETHERCAT = 5 // CanOpen over Ethercat
 	};
 	
 	enum CanBaudRate {

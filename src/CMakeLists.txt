@@ -10,8 +10,8 @@ include_directories($ENV{CMAKE_PREFIX_PATH}/include)
 #    SOURCES CanPeakSysUSB.cpp CanDriveWhistle.cpp StrUtil.cpp TimeStamp.cpp Platform_Driver.cpp
 #    HEADERS CanMsg.h CanItf.h CanPeakSysUSB.h CanDriveItf.h CanDriveWhistle.h DriveParam.h Mutex.h StrUtil.h TimeStamp.h Platform_Driver.h)
 rock_library(platform_driver
-    SOURCES CanDriveWhistle.cpp StrUtil.cpp TimeStamp.cpp Platform_Driver.cpp
-    HEADERS CanMsg.h CanItf.h CanDriveItf.h CanDriveWhistle.h DriveParam.h Mutex.h StrUtil.h TimeStamp.h Platform_Driver.h)
+    SOURCES CANOverEthercat.cpp CanDriveWhistle.cpp StrUtil.cpp TimeStamp.cpp Platform_Driver.cpp
+    HEADERS CanMsg.h CanItf.h CANOverEthercat.hpp CanDriveItf.h CanDriveWhistle.h DriveParam.h Mutex.h StrUtil.h TimeStamp.h Platform_Driver.h
 
 #rock_executable(platform_driver_bin main.cpp
 #    DEPS platform_driver)
