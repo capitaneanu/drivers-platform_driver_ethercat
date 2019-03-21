@@ -83,7 +83,8 @@
 #include <cstdlib>
 
 //* Headers provided by other packages inside the library
-//#include "CanPeakSysUSB.h"
+#include "CanPeakSysUSB.h"
+#include "CANOverEthercat.h"
 #include "CanDriveItf.h"
 #include "Platform_Driver.h"
 
@@ -215,12 +216,12 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive, GearMoto
 {
 	if (m_iCanItfType == CanItf::CAN_PEAK_USB)
 	{
-		//m_pCanCtrl = new CANPeakSysUSB(can_address);
-		std::cout << "CAN-Peak-USB deprecated in this version" << std::endl;
-        return false;
+		m_pCanCtrl = new CANPeakSysUSB(can_address);
+		std::cout << "Uses CAN-Peak-USB" << std::endl;
 	}
-	else
+	else if (m_iCanItfType == CanItf::CAN_ETHERCAT)
 	{
+        m_pCanCtrl = new CANOverEthercat(can_address);
 		std::cout << "Wrong or unknown Type of CAN interface" << std::endl;
 		return false;
 	}
