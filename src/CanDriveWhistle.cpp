@@ -567,8 +567,10 @@ bool CanDriveWhistle::init()
 	//* 2. receive the boot-up message to confirm the presence of the drive.
 	//sendNMTMsg(CMD_NMT_SW_RESET); //! Note: The reset command is implemented in the reset() method now.
 
+	std::cout << "CanDriveWhistle::init: Start init for drive " << m_sName << std::endl;
+
 	int cnt=0;
-	while(!m_bIsPresent && cnt < 100);
+	while(!m_bIsPresent && cnt < 100)
 	{
 		usleep(10000);
 		cnt++;
