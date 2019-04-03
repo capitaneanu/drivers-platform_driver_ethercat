@@ -17,8 +17,13 @@ public:
 	bool transmitMsg(CanMsg CMsg, bool bBlocking = true);
 	bool receiveMsg(CanMsg* pCMsg);
 	bool receiveMsgRetry(CanMsg* pCMsg, int iNrOfRetry);
+    static void *ecatcheck(void *ptr);
 private:
-    bool _isInitialized;
+    char _io_map[4096];
+    static int _expected_wkc;
+    static volatile int _wkc;
+    static bool _is_initialized;
+    pthread_t _ecatcheck_thread_handle;
 };
 
 #endif
