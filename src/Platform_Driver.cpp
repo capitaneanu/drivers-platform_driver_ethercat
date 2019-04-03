@@ -221,9 +221,18 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive, GearMoto
 	}
 	else if (m_iCanItfType == CanItf::CAN_ETHERCAT)
 	{
+		std::cout << "Uses EtherCAT on interface " << can_address << std::endl;
         m_pCanCtrl = new CANOverEthercat(can_address);
-		std::cout << "Wrong or unknown Type of CAN interface" << std::endl;
-		return false;
+
+        if (!m_pCanCtrl->isInit())
+        {
+		    std::cout << "Could not initialize EtherCAT interface" << std::endl;
+            return false;
+        }
+        else
+        {
+		    std::cout << "EtherCAT interface initialized" << std::endl;
+        }
 	}
 
 	/**
@@ -587,6 +596,8 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive, GearMoto
 
 	}
 
+    std::cout << "Platform_Driver::readConfiguration: Success" <<std::endl;
+
 	return true;
 }
 
@@ -666,6 +677,8 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive, GearMotorParamTyp
 
 		std::cout << "Motor "<< m_vCanNodeIDs.Name[i] << " started" << std::endl;
 	}
+
+    std::cout << "Platform_Driver::initPltf: motor init success" << std::endl;
 
 	//* Start timer for sending periodic SYNC messages, watchdog error detection and error control
 	configureTimer();
