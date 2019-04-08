@@ -1,34 +1,35 @@
-#include "CANOverEthercat.h"
+#include "CanOverEthercat.h"
 #include "soem/ethercat.h"
 
 #define EC_TIMEOUTMON 500
 
-int CANOverEthercat::_expected_wkc = 0;
-volatile int CANOverEthercat::_wkc = 0;
-bool CANOverEthercat::_is_initialized = false;
+int CanOverEthercat::_expected_wkc = 0;
+volatile int CanOverEthercat::_wkc = 0;
+bool CanOverEthercat::_is_initialized = false;
+bool CanOverEthercat::_pdo_update = 0;
 
-CANOverEthercat::CANOverEthercat()
+CanOverEthercat::CanOverEthercat()
 //: _is_initialized(false)
 {
     init();
 }
 
-CANOverEthercat::CANOverEthercat(const std::string& devName)
+CanOverEthercat::CanOverEthercat(const std::string& devName)
 //: _is_initialized(false)
 {
     init(devName);
 }
 
-CANOverEthercat::~CANOverEthercat()
+CanOverEthercat::~CanOverEthercat()
 {
     close();
 }
 
-void CANOverEthercat::init()
+void CanOverEthercat::init()
 {
 }
 
-void CANOverEthercat::init(const std::string& devName)
+void CanOverEthercat::init(const std::string& devName)
 {
     /* initialise SOEM, bind socket to ifname */
     if (ec_init(devName.c_str()))
@@ -77,8 +78,8 @@ void CANOverEthercat::init(const std::string& devName)
                printf("Operational state reached for all slaves.\n");
                _is_initialized = true;
 
-               /* create thread to handle slave error handling in OP */
-               pthread_create(&_ecatcheck_thread_handle, NULL, &ecatcheck, NULL);
+               /* create thread for pdo cycle */
+               pthread_create(&_thread_handle, NULL, &pdo_cycle, NULL);
            }
            else
            {
@@ -116,7 +117,7 @@ void CANOverEthercat::init(const std::string& devName)
     }
 }
 
-void CANOverEthercat::close()
+void CanOverEthercat::close()
 {
     if (isInit())
     {
@@ -125,9 +126,9 @@ void CANOverEthercat::close()
         /* request INIT state for all slaves */
         ec_writestate(0);
 
-        //cancel ecatcheck thread
-        pthread_cancel(_ecatcheck_thread_handle);
-        pthread_join(_ecatcheck_thread_handle, NULL);
+        // cancel pdo_cycle thread
+        pthread_cancel(_thread_handle);
+        pthread_join(_thread_handle, NULL);
 
         _is_initialized = false;
     }
@@ -135,28 +136,29 @@ void CANOverEthercat::close()
     printf("Close socket\n");
     ec_close();
 }
-bool CANOverEthercat::isInit()
+bool CanOverEthercat::isInit()
 {
     return _is_initialized;
 }
-int  CANOverEthercat::availableMessages()
+int  CanOverEthercat::availableMessages()
 {
-    return 0;
+    return _sdo_messages.size() + _pdo_update;
 }
-bool CANOverEthercat::transmitMsg(CanMsg CMsg, bool bBlocking)
+bool CanOverEthercat::transmitMsg(CanMsg CMsg, bool bBlocking)
 {
     return false;
 }
-bool CANOverEthercat::receiveMsg(CanMsg* pCMsg)
+bool CanOverEthercat::receiveMsg(CanMsg* pCMsg)
 {
     return false;
 }
-bool CANOverEthercat::receiveMsgRetry(CanMsg* pCMsg, int iNrOfRetry)
+bool CanOverEthercat::receiveMsgRetry(CanMsg* pCMsg, int iNrOfRetry)
 {
+    // not implemented
     return false;
 }
 
-void *CANOverEthercat::ecatcheck(void *ptr)
+void *CanOverEthercat::pdo_cycle(void *ptr)
 {
     int currentgroup = 0;
 
@@ -164,6 +166,9 @@ void *CANOverEthercat::ecatcheck(void *ptr)
     {
         ec_send_processdata();
         _wkc = ec_receive_processdata(EC_TIMEOUTRET);
+
+        // new pdo data available
+        _pdo_update = true;
 
         while (EcatError) printf("%s", ec_elist2string());
 
@@ -230,6 +235,6 @@ void *CANOverEthercat::ecatcheck(void *ptr)
                printf("OK : all slaves resumed OPERATIONAL.\n");
         }
 
-        osal_usleep(10000);
+        osal_usleep(10000); // roughly 100 Hz
     }
 }
