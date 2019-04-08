@@ -6,13 +6,6 @@
 int CanOverEthercat::_expected_wkc = 0;
 volatile int CanOverEthercat::_wkc = 0;
 bool CanOverEthercat::_is_initialized = false;
-bool CanOverEthercat::_pdo_update = 0;
-
-CanOverEthercat::CanOverEthercat()
-//: _is_initialized(false)
-{
-    init();
-}
 
 CanOverEthercat::CanOverEthercat(const std::string& devName)
 //: _is_initialized(false)
@@ -23,10 +16,6 @@ CanOverEthercat::CanOverEthercat(const std::string& devName)
 CanOverEthercat::~CanOverEthercat()
 {
     close();
-}
-
-void CanOverEthercat::init()
-{
 }
 
 void CanOverEthercat::init(const std::string& devName)
@@ -41,10 +30,10 @@ void CanOverEthercat::init(const std::string& devName)
            printf("%d slaves found and configured.\n", ec_slavecount);
 
            // Set preop to safeop hook
-           //for (slc = 1; slc <= ec_slavecount; slc++)
-           //{
-           //    ec_slave[slc].PO2SOconfig = &ELMOsetup;
-           //}
+           for (slc = 1; slc <= ec_slavecount; slc++)
+           {
+               ec_slave[slc].PO2SOconfig = &driveSetup;
+           }
 
            ec_config_map(&_io_map);
            ec_configdc();
@@ -136,26 +125,51 @@ void CanOverEthercat::close()
     printf("Close socket\n");
     ec_close();
 }
+
 bool CanOverEthercat::isInit()
 {
     return _is_initialized;
 }
-int  CanOverEthercat::availableMessages()
+
+bool CanOverEthercat::sdoRead(uint16 slave, uint16 idx, uint8 sub, int *data)
 {
-    return _sdo_messages.size() + _pdo_update;
+    int fieldsize = sizeof(data);
+
+    int wkc = ec_SDOread(slave, idx, sub, FALSE, &fieldsize, &data, EC_TIMEOUTRXM);
+
+    //TODO: check wkc
+
+    return true;
 }
-bool CanOverEthercat::transmitMsg(CanMsg CMsg, bool bBlocking)
+
+bool CanOverEthercat::sdoWrite(uint16 slave, uint16 idx, uint8 sub, int fieldsize, int data)
 {
-    return false;
+    int wkc = ec_SDOwrite(slave, idx, sub, FALSE, fieldsize, &data, EC_TIMEOUTRXM);
+
+    //TODO: check wkc
+
+    return true;
 }
-bool CanOverEthercat::receiveMsg(CanMsg* pCMsg)
+
+char* CanOverEthercat::getInputPdoPtr(uint16 slave)
 {
-    return false;
 }
-bool CanOverEthercat::receiveMsgRetry(CanMsg* pCMsg, int iNrOfRetry)
+
+char* CanOverEthercat::getOutputPdoPtr(uint16 slave)
 {
-    // not implemented
-    return false;
+}
+
+void CanOverEthercat::driveSetup(uint16 slave)
+{
+    // set RxPDO map
+    sdoWrite(slave, 0x1c12, 0, 1, 0x00);
+    sdoWrite(slave, 0x1c12, 1, 2, 0x1605);
+    sdoWrite(slave, 0x1c12, 0, 1, 0x01);
+
+    // set TxPDO map
+    sdoWrite(slave, 0x1c13, 0, 1, 0x00);
+    sdoWrite(slave, 0x1c13, 1, 2, 0x1A03);
+    sdoWrite(slave, 0x1c13, 0, 1, 0x01);
 }
 
 void *CanOverEthercat::pdo_cycle(void *ptr)
@@ -166,9 +180,6 @@ void *CanOverEthercat::pdo_cycle(void *ptr)
     {
         ec_send_processdata();
         _wkc = ec_receive_processdata(EC_TIMEOUTRET);
-
-        // new pdo data available
-        _pdo_update = true;
 
         while (EcatError) printf("%s", ec_elist2string());
 
