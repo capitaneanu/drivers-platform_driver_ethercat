@@ -1,14 +1,15 @@
 #include "CanOverEthercat.h"
 #include "soem/ethercat.h"
 
+#include <string>
+
 #define EC_TIMEOUTMON 500
 
 int CanOverEthercat::_expected_wkc = 0;
 volatile int CanOverEthercat::_wkc = 0;
-bool CanOverEthercat::_is_initialized = false;
 
 CanOverEthercat::CanOverEthercat(const std::string& devName)
-//: _is_initialized(false)
+: _is_initialized(false)
 {
     init(devName);
 }
@@ -68,7 +69,7 @@ void CanOverEthercat::init(const std::string& devName)
                _is_initialized = true;
 
                /* create thread for pdo cycle */
-               pthread_create(&_thread_handle, NULL, &pdo_cycle, NULL);
+               pthread_create(&_thread_handle, NULL, &pdoCycle, NULL);
            }
            else
            {
@@ -153,26 +154,37 @@ bool CanOverEthercat::sdoWrite(uint16 slave, uint16 idx, uint8 sub, int fieldsiz
 
 char* CanOverEthercat::getInputPdoPtr(uint16 slave)
 {
+    return ec_slave[slave].inputs;
 }
 
 char* CanOverEthercat::getOutputPdoPtr(uint16 slave)
 {
+    return ec_slave[slave].output;
 }
 
 void CanOverEthercat::driveSetup(uint16 slave)
 {
     // set RxPDO map
     sdoWrite(slave, 0x1c12, 0, 1, 0x00);
-    sdoWrite(slave, 0x1c12, 1, 2, 0x1605);
-    sdoWrite(slave, 0x1c12, 0, 1, 0x01);
+    sdoWrite(slave, 0x1c12, 1, 2, 0x160a); // control word
+    sdoWrite(slave, 0x1c12, 2, 2, 0x160b); // mode of operation
+    sdoWrite(slave, 0x1c12, 3, 2, 0x160f); // target position
+    sdoWrite(slave, 0x1c12, 4, 2, 0x161c); // target velocity
+    sdoWrite(slave, 0x1c12, 5, 2, 0x160c); // target torque
+    sdoWrite(slave, 0x1c12, 0, 1, 0x05);
 
     // set TxPDO map
     sdoWrite(slave, 0x1c13, 0, 1, 0x00);
-    sdoWrite(slave, 0x1c13, 1, 2, 0x1A03);
-    sdoWrite(slave, 0x1c13, 0, 1, 0x01);
+    sdoWrite(slave, 0x1c13, 1, 2, 0x1a0a); // status word
+    sdoWrite(slave, 0x1c13, 2, 2, 0x1a0b); // mode of operation display
+    sdoWrite(slave, 0x1c13, 3, 2, 0x1a0e); // actual position
+    sdoWrite(slave, 0x1c13, 4, 2, 0x1a11); // actual velocity
+    sdoWrite(slave, 0x1c13, 5, 2, 0x1a13); // actual torque
+    sdoWrite(slave, 0x1c13, 5, 2, 0x1a1d); // analog input
+    sdoWrite(slave, 0x1c13, 0, 1, 0x06);
 }
 
-void *CanOverEthercat::pdo_cycle(void *ptr)
+void *CanOverEthercat::pdoCycle(void *ptr)
 {
     int currentgroup = 0;
 
