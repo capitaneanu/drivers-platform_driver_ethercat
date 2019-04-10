@@ -1,6 +1,8 @@
 #ifndef CANDRIVETWITTER_INCLUDEDEF_H
 #define CANDRIVETWITTER_INCLUDEDEF_H
 
+
+
 //* include files ---------------------------------------------
 
 #include "CanOverEthercat.h"
@@ -127,13 +129,11 @@ public:
 	 * @return The value (in Nm) of the current motor torque is stored in this pointer.
 	 */
 	double getTorqueNm();
-    
+
 	/**
 	 * Returns received value from analog input.
 	 */
 	double getAnalogInput();
-
-    StateTwitter getState()
 
 	/**
 	 * Returns true if an error has been detected.
@@ -172,10 +172,112 @@ public:
 	DriveParam *getDriveParam();
 
 private:
+    enum class DriveObject
+    {
+        // Error control objects
+        ABORT_CONNECTION_OPTION_CODE = 0x6007;
+        ERROR_CODE = 0x603f;
+
+        // Device Control Objects
+        CONTROL_WORD = 0x6040;
+        STATUS_WORD = 0x6041;
+
+        // Halt, stop and fault objects
+        QUICK_STOP_OPTION_CODE = 0x605a;
+        SHUTDOWN_OPTION_CODE = 0x605b;
+        DISABLE_OPERATION_OPTION_CODE = 0x605c;
+        HALT_OPTION_CODE = 0x605d;
+        FAULT_REACTION_OPTION_CODE = 0x605e;
+
+        // Modes of operation
+        MODES_OF_OPERATION = 0x6060;
+        MODES_OF_OPERATION_DISPLAY = 0x6061;
+        SUPPORTED_DRIVE_MODES = 0x6502;
+
+        // Position control
+        POSITION_DEMAND_VALUE = 0x6062;
+        POSITION_ACTUAL_INTERNAL_VALUE = 0x6063;
+        POSITION_ACTUAL_VALUE = 0x6064;
+        FOLLOWING_ERROR_WINDOW = 0x6065;
+        FOLLOWING_ERROR_TIMEOUT = 0x6066;
+        POSITION_WINDOW = 0x6067;
+        POSITION_WINDOW_TIME = 0x6068;
+        TARGET_POSITION = 0x607a;
+        POSITION_RANGE_LIMIT = 0x607b;
+        SOFTWARE_POSITION_LIMIT = 0x607d;
+        MAX_PROFILE_VELOCITY = 0x607f;
+        MAX_MOTOR_SPEED = 0x6080;
+        PROFILE_VELOCITY = 0x6081;
+        END_VELOCITY = 0x6082;
+        PROFILE_ACCELERATION = 0x6083;
+        PROFILE_DECELRATION = 0x6084;
+        QUICK_STOP_DECELERATION = 0x6085;
+        MOTION_PROFILE_TYPE = 0x6086;
+        MAX_ACCELERATION = 0x60c5;
+        MAX_DECELERATION = 0x60c6;
+        POSITION_OPTION_CODE = 0x60f2;
+        FOLLOWING_ERROR_ACTUAL_VALUE = 0x60f4;
+        CONTROL_EFFORT = 0x60fa;
+        POSITION_DEMAND_INTERNAL_VALUE_INCREMENTS = 0x60fc;
+
+        // Velocity control
+        VELOCITY_SENSOR_ACTUAL_VALUE = 0x6069;
+        SENSOR_SELECTION_CODE = 0x606a;
+        VELOCITY_DEMAND_VALUE = 0x606b;
+        VELOCITY_ACTUAL_VALUE = 0x606c;
+        VELOCITY_WINDOW = 0x606d;
+        VELOCITY_WINDOW_TIME = 0x606e;
+        VELOCITY_THRESHOLD = 0x606f;
+        VELOCITY_THRESHOLD_TIME = 0x6070;
+        TARGET_VELOCITY = 0x60ff;
+
+        // Torque control
+        TARGET_TORQUE = 0x6071;
+        MAX_TORQUE = 0x6072;
+        MAX_CURRENT = 0x6073;
+        TORQUE_DEMAND_VALUE = 0x6074;
+        MOTOR_RATE_CURRENT = 0x6075;
+        MOTOR_RATE_TORQUE = 0x6076;
+        TORQUE_ACTUAL_VALUE = 0x6077;
+        CURRENT_ACTUAL_VALUE = 0x6078;
+        DC_LINK_CIRCUIT_VOLTAGE = 0x6079;
+        TORQUE_SLOPE = 0x6087;
+        POSITIVE_TORQUE_LIMIT_VALUE = 0x60e0;
+        NEGATIVE_TORQUE_LIMIT_VALUE = 0x60e1;
+
+        // Factors
+        POLARITY = 0x607e;
+        POSITION_NOTATION_INDEX = 0x6089;
+        POSITION_DIMENSION_INDEX = 0x608a;
+        VELOCITY_NOTATION_INDEX = 0x608b;
+        VELOCITY_DIMENSION_INDEX = 0x608c;
+        ACCELERATION_NOTATION_INDEX = 0x608d;
+        ACCELERATION_DIMENSION_INDEX = 0x608e;
+        POSITION_ENCODER_RESOLUTION = 0x608f;
+        VELOCITY_ENCODER_RESOLUTION = 0x6090;
+        GEAR_RATIO = 0x6091;
+        FEED_CONSTANT = 0x6092;
+        POSITION_FACTOR = 0x6093;
+        VELOCITY_ENCODER_FACTOR = 0x6094;
+        VELOCITY_FACTOR_1 = 0x6095;
+        VELOCITY_FACTOR = 0x6096;
+        ACCELERATION_FACTOR = 0x6097;
+
+        // Cyclic synchronous modes
+        POSITION_OFFSET = 0x60b0;
+        VELOCITY_OFFSET = 0x60b1;
+        TORQUE_OFFSET = 0x60b2;
+
+        // Drive data objects
+        ANALOG_INPUT = 0x2205;
+        DIGITAL_INPUTS = 0x60fd;
+        DIGITAL_OUTPUTS = 0x60fe;
+    }
+
 	/**
-	 * States of the CANOpen drive state machine. 
+	 * States of the CANOpen drive state machine.
 	 */
-	enum StateTwitter
+	enum DriveState
 	{
 		ST_NOT_READY_TO_SWITCH_ON,
 		ST_SWITCH_ON_DISABLED,
@@ -208,7 +310,7 @@ private:
         int32 target_velocity;
         int16 target_torque;
     } RxPDO;
-    
+
     typedef struct TxPDO
     {
         uint16 status_word;
@@ -227,7 +329,7 @@ private:
 	/**
 	 * Returns the state of the drive
 	 */
-	StateTwitter getState();
+	DriveState getDriveState();
     OperationMode getOperationMode()
     bool setOperationMode(OperationMode mode)
 };

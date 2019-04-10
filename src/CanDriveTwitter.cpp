@@ -18,7 +18,7 @@ bool CanDriveTwitter::init()
 
 bool CanDriveTwitter::startup()
 {
-    State state = getState();
+    DriveState state = getDriveState();
     int cnt = 100;
 
     while (state != ST_OPERATION_ENABLE)
@@ -43,7 +43,7 @@ bool CanDriveTwitter::startup()
         }
         
         usleep(100000); // sleep 0.1 s
-        state = getState();
+        state = getDriveState();
 
         if (cnt-- == 0)
         {
@@ -58,7 +58,7 @@ bool CanDriveTwitter::startup()
 
 bool CanDriveTwitter::shutdown()
 {	
-    State state = getState();
+    DriveState state = getDriveState();
     int cnt = 100;
 
     while (state != ST_SWITCH_ON_DISABLED)
@@ -83,7 +83,7 @@ bool CanDriveTwitter::shutdown()
         }
         
         usleep(100000); // sleep 0.1 s
-        state = getState();
+        state = getDriveState();
 
         if (cnt-- == 0)
         {
@@ -173,7 +173,7 @@ double CanDriveTwitter::getAnalogInput()
 {
 }
 
-CanDriveTwitter::StateTwitter CanDriveTwitter::getState()
+CanDriveTwitter::DriveState CanDriveTwitter::getDriveState()
 {
     unsigned char status_lower = (unsigned char) input->status_word;
     unsigned char bits0to3 = status_lower & 0x0f;
@@ -211,7 +211,7 @@ CanDriveTwitter::StateTwitter CanDriveTwitter::getState()
 
 bool CanDriveTwitter::isError()
 {
-    StateTwitter state = getState();
+    DriveState state = getDriveState();
 
     return (state == ST_FAULT_REACTION_ACTIVE) || (state == ST_FAULT);
 }
@@ -239,5 +239,3 @@ void CanDriveTwitter::setDriveParam(DriveParam driveParam)
 DriveParam *CanDriveTwitter::getDriveParam()
 {
 }
-
-p
