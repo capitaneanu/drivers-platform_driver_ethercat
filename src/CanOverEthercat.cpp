@@ -1,17 +1,15 @@
 #include "CanOverEthercat.h"
 #include "soem/ethercat.h"
 
-#include <string>
 
 #define EC_TIMEOUTMON 500
 
 int CanOverEthercat::_expected_wkc = 0;
 volatile int CanOverEthercat::_wkc = 0;
 
-CanOverEthercat::CanOverEthercat(const std::string& devName)
-: _is_initialized(false)
+CanOverEthercat::CanOverEthercat(const std::string device_name)
+: _device_name(device_name), _is_initialized(false)
 {
-    init(devName);
 }
 
 CanOverEthercat::~CanOverEthercat()
@@ -19,21 +17,21 @@ CanOverEthercat::~CanOverEthercat()
     close();
 }
 
-void CanOverEthercat::init(const std::string& devName)
+bool CanOverEthercat::init()
 {
     /* initialise SOEM, bind socket to ifname */
-    if (ec_init(devName.c_str()))
+    if (ec_init(_device_name.c_str()))
     {
-       printf("ec_init on %s succeeded.\n", devName.c_str());
+       printf("ec_init on %s succeeded.\n", _device_name.c_str());
        /* find and auto-config slaves */
        if (ec_config_init(FALSE) > 0)
        {
            printf("%d slaves found and configured.\n", ec_slavecount);
 
            // Set preop to safeop hook
-           for (slc = 1; slc <= ec_slavecount; slc++)
+           for (int slc = 1; slc <= ec_slavecount; slc++)
            {
-               ec_slave[slc].PO2SOconfig = &driveSetup;
+               ec_slave[slc].PO2SOconfig = &CanOverEthercat::driveSetup;
            }
 
            ec_config_map(&_io_map);
@@ -66,10 +64,12 @@ void CanOverEthercat::init(const std::string& devName)
            if (ec_slave[0].state == EC_STATE_OPERATIONAL)
            {
                printf("Operational state reached for all slaves.\n");
-               _is_initialized = true;
 
                /* create thread for pdo cycle */
                pthread_create(&_thread_handle, NULL, &pdoCycle, NULL);
+
+               _is_initialized = true;
+               return true;
            }
            else
            {
@@ -88,6 +88,8 @@ void CanOverEthercat::init(const std::string& devName)
 
                printf("Close socket\n");
                ec_close();
+
+               return false;
            }
 
        }
@@ -98,12 +100,15 @@ void CanOverEthercat::init(const std::string& devName)
 
            printf("Close socket\n");
            ec_close();
+
+           return false;
        }
     }
     else
     {
-        printf("ec_init on %s not succeeded.\n", devName.c_str());
+        printf("ec_init on %s not succeeded.\n", _device_name.c_str());
         _is_initialized = false;
+        return false;
     }
 }
 
@@ -132,7 +137,7 @@ bool CanOverEthercat::isInit()
     return _is_initialized;
 }
 
-bool CanOverEthercat::sdoRead(uint16 slave, uint16 idx, uint8 sub, int *data)
+bool CanOverEthercat::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int *data)
 {
     int fieldsize = sizeof(data);
 
@@ -143,7 +148,7 @@ bool CanOverEthercat::sdoRead(uint16 slave, uint16 idx, uint8 sub, int *data)
     return true;
 }
 
-bool CanOverEthercat::sdoWrite(uint16 slave, uint16 idx, uint8 sub, int fieldsize, int data)
+bool CanOverEthercat::sdoWrite(uint16_t slave, uint16_t idx, uint8_t sub, int fieldsize, int data)
 {
     int wkc = ec_SDOwrite(slave, idx, sub, FALSE, fieldsize, &data, EC_TIMEOUTRXM);
 
@@ -152,36 +157,54 @@ bool CanOverEthercat::sdoWrite(uint16 slave, uint16 idx, uint8 sub, int fieldsiz
     return true;
 }
 
-char* CanOverEthercat::getInputPdoPtr(uint16 slave)
+unsigned char *CanOverEthercat::getInputPdoPtr(uint16_t slave)
 {
     return ec_slave[slave].inputs;
 }
 
-char* CanOverEthercat::getOutputPdoPtr(uint16 slave)
+unsigned char *CanOverEthercat::getOutputPdoPtr(uint16_t slave)
 {
-    return ec_slave[slave].output;
+    return ec_slave[slave].outputs;
 }
 
-void CanOverEthercat::driveSetup(uint16 slave)
+int CanOverEthercat::driveSetup(uint16_t slave)
 {
     // set RxPDO map
-    sdoWrite(slave, 0x1c12, 0, 1, 0x00);
+    sdoWrite(slave, 0x1c12, 0, 1, 0x00);   // disable
     sdoWrite(slave, 0x1c12, 1, 2, 0x160a); // control word
     sdoWrite(slave, 0x1c12, 2, 2, 0x160b); // mode of operation
     sdoWrite(slave, 0x1c12, 3, 2, 0x160f); // target position
     sdoWrite(slave, 0x1c12, 4, 2, 0x161c); // target velocity
     sdoWrite(slave, 0x1c12, 5, 2, 0x160c); // target torque
-    sdoWrite(slave, 0x1c12, 0, 1, 0x05);
+    sdoWrite(slave, 0x1c12, 0, 1, 0x05);   // enable
 
     // set TxPDO map
-    sdoWrite(slave, 0x1c13, 0, 1, 0x00);
+    sdoWrite(slave, 0x1c13, 0, 1, 0x00);   // disable
     sdoWrite(slave, 0x1c13, 1, 2, 0x1a0a); // status word
     sdoWrite(slave, 0x1c13, 2, 2, 0x1a0b); // mode of operation display
     sdoWrite(slave, 0x1c13, 3, 2, 0x1a0e); // actual position
     sdoWrite(slave, 0x1c13, 4, 2, 0x1a11); // actual velocity
     sdoWrite(slave, 0x1c13, 5, 2, 0x1a13); // actual torque
     sdoWrite(slave, 0x1c13, 5, 2, 0x1a1d); // analog input
-    sdoWrite(slave, 0x1c13, 0, 1, 0x06);
+    sdoWrite(slave, 0x1c13, 0, 1, 0x06);   // enable
+
+    // set commutation
+    sdoWrite(slave, 0x3034, 17, 4, 0x00000003); // commutation method
+    sdoWrite(slave, 0x31D6, 1, 4, 0x41f00000);  // stepper commutation desired current
+
+    // set limits
+    sdoWrite(slave, 0x6072, 0, 2, 0x0c76);      // max torque (from stall torque)
+    sdoWrite(slave, 0x6073, 0, 2, 0x0b89);      // max current (from stall current)
+    sdoWrite(slave, 0x6075, 0, 4, 0x00000292);  // motor rated current (657 mA)
+    sdoWrite(slave, 0x6076, 0, 4, 0x0000000b);  // motor rated torque (11 mNm)
+    sdoWrite(slave, 0x607D, 1, 4, 0xfffb3e0d);  // min position limit (-100 deg)
+    sdoWrite(slave, 0x607D, 2, 4, 0x0004c1c3);  // max position limit (100 deg)
+    sdoWrite(slave, 0x607F, 0, 4, 0x00010aab);  // max profile velocity (8000 rpm)
+
+    // set profile motion parameters
+    sdoWrite(slave, 0x6081, 0, 4, 0x00001388);  // profile velocity (5000 inc/sec)
+    sdoWrite(slave, 0x6083, 0, 4, 0x000186A0);  // profile acceleration (100000 inc/sec^2)
+    sdoWrite(slave, 0x6084, 0, 4, 0x000186A0);  // profile decelaration (100000 inc/sec^2)
 }
 
 void *CanOverEthercat::pdoCycle(void *ptr)

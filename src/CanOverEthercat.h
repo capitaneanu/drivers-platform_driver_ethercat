@@ -6,23 +6,26 @@
 class CanOverEthercat
 {
 public:
-	CanOverEthercat(const std::string& devName);
+	CanOverEthercat(const std::string device_name);
 	~CanOverEthercat();
+	bool init();
 	void close();
 	bool isInit();
-    bool sdoRead(uint16 slave, uint16 idx, uint8 sub, int *data);
-    bool sdoWrite(uint16 slave, uint16 idx, uint8 sub, int fieldsize, int data);
-    char* getInputPdoPtr(uint16 slave);
-    char* getOutputPdoPtr(uint16 slave);
+    unsigned char *getInputPdoPtr(uint16_t slave);
+    unsigned char *getOutputPdoPtr(uint16_t slave);
+
+    static bool sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int *data);
+    static bool sdoWrite(uint16_t slave, uint16_t idx, uint8_t sub, int fieldsize, int data);
 private:
     char _io_map[4096];
+    std::string _device_name;
     bool _is_initialized;
-    static int _expected_wkc;
-    static volatile int _wkc;
     pthread_t _thread_handle;
 
-	void init(const std::string& devName);
-    void driveSetup(uint16 slave);
+    static int _expected_wkc;
+    static volatile int _wkc;
+
+    static int driveSetup(uint16_t slave);
     static void *pdoCycle(void *ptr);
 };
 
