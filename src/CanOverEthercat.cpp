@@ -190,16 +190,16 @@ int CanOverEthercat::driveSetup(uint16_t slave)
 
     // set commutation
     sdoWrite(slave, 0x3034, 17, 4, 0x00000003); // commutation method
-    sdoWrite(slave, 0x31D6, 1, 4, 0x41f00000);  // stepper commutation desired current
+    sdoWrite(slave, 0x31d6, 1, 4, 0x41f00000);  // stepper commutation desired current
 
     // set limits
     sdoWrite(slave, 0x6072, 0, 2, 0x0c76);      // max torque (from stall torque)
     sdoWrite(slave, 0x6073, 0, 2, 0x0b89);      // max current (from stall current)
     sdoWrite(slave, 0x6075, 0, 4, 0x00000292);  // motor rated current (657 mA)
     sdoWrite(slave, 0x6076, 0, 4, 0x0000000b);  // motor rated torque (11 mNm)
-    sdoWrite(slave, 0x607D, 1, 4, 0xfffb3e0d);  // min position limit (-100 deg)
-    sdoWrite(slave, 0x607D, 2, 4, 0x0004c1c3);  // max position limit (100 deg)
-    sdoWrite(slave, 0x607F, 0, 4, 0x00010aab);  // max profile velocity (8000 rpm)
+    sdoWrite(slave, 0x607d, 1, 4, 0xfffb3e0d);  // min position limit (-100 deg)
+    sdoWrite(slave, 0x607d, 2, 4, 0x0004c1f3);  // max position limit (100 deg)
+    sdoWrite(slave, 0x607f, 0, 4, 0x00010aab);  // max profile velocity (8000 rpm)
 
     // set profile motion parameters
     sdoWrite(slave, 0x6081, 0, 4, 0x00001388);  // profile velocity (5000 inc/sec)
