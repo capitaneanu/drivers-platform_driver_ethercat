@@ -147,8 +147,23 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
 {
     commandOperationMode(OM_PROFILE_POSITION);
     //commandOperationMode(OM_CYCSYNC_POSITION);
+    
     output->target_position = _drive_param.PosGearRadToPosMotIncr(position_rad);
     output->control_word |= 0x0030; // new set point & change set point immediately
+
+    int cnt = 1000;
+
+    while (!checkSetPointAcknowledge())
+    {
+        usleep(1000); // sleep 0.001 s
+
+        if (cnt-- == 0)
+        {
+	        std::cout << "CanDriveTwitter::commandPostionRad: New set point " << output->target_position << " was not acknowledged for drive " << _drive_name << std::endl;
+        }
+    }
+
+    output->control_word &= 0xffef; // no new set point 
 
     std::cout << "CanDriveTwitter::commandPositionRad: Drive: " << _drive_name << " Current position: " << input->actual_position << " Target position: " << output->target_position << std::endl;
 }
@@ -172,6 +187,13 @@ bool CanDriveTwitter::checkTargetReached()
     unsigned char bit10 = (unsigned char) ((input->status_word >> 10) & 0x0001);
 
     return (bool) bit10;
+}
+
+bool CanDriveTwitter::checkSetPointAcknowledge()
+{
+    unsigned char bit12 = (unsigned char) ((input->status_word >> 12) & 0x0001);
+
+    return (bool) bit12;
 }
 
 double CanDriveTwitter::readPositionRad()

@@ -78,12 +78,6 @@ public:
      */
     void commandTorqueNm(double torque_nm);
 
-    /**
-     * Checks if the target set point was already reached.
-     * @return True if the target set point was already reached.
-     */
-    bool checkTargetReached();
-
 	/**
 	 * Reads the last received value of the drive position.
 	 * @return The value of the current position of the motor.
@@ -300,6 +294,19 @@ private:
 	DriveState readDriveState();
     OperationMode readOperationMode();
     bool commandOperationMode(OperationMode mode);
+
+    /**
+     * Checks if the target set point was already reached.
+     * @return True if the target set point was already reached.
+     */
+    bool checkTargetReached();
+
+    /**
+     * Checks if thei trajectory generator has assumed the new
+     * positioning value.
+     * @return True if the new set point was acknowledged.
+     */
+    bool checkSetPointAcknowledge();
 };
 
 //-----------------------------------------------
