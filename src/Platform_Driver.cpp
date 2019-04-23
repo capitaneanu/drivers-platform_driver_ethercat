@@ -50,12 +50,12 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 	for (int i = 0; i < m_iNumNodes; i++)
 	{
 		//* add new Twitter
-		m_vpMotor.push_back(new CanDriveTwitter(m_pCanCtrl, m_vCanNodeIDs.CanId[i], m_vCanNodeIDs.Name[i]));
+        CanDriveTwitter *drive = new CanDriveTwitter(m_pCanCtrl, m_vCanNodeIDs.CanId[i], m_vCanNodeIDs.Name[i]);
 
 		//* set Motor parameters depending on the type of motor
 		if (m_vCanNodeIDs.Type[i] == WHEEL_DRIVE)
 		{
-			m_vpMotor[i]->getDriveParam()->setParam(
+			drive->getDriveParam()->setParam(
 					wheel_drive_params.iEncIncrPerRevMot,
 					wheel_drive_params.dBeltRatio,
 					wheel_drive_params.dGearRatio,
@@ -75,7 +75,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 		}
 		else if (m_vCanNodeIDs.Type[i] == WHEEL_STEER)
 		{
-			m_vpMotor[i]->getDriveParam()->setParam(
+			drive->getDriveParam()->setParam(
 					steer_drive_params.iEncIncrPerRevMot,
 					steer_drive_params.dBeltRatio,
 					steer_drive_params.dGearRatio,
@@ -95,7 +95,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 		}
 		else if (m_vCanNodeIDs.Type[i] == WHEEL_WALK)
 		{
-			m_vpMotor[i]->getDriveParam()->setParam(
+			drive->getDriveParam()->setParam(
 					walk_drive_params.iEncIncrPerRevMot,
 					walk_drive_params.dBeltRatio,
 					walk_drive_params.dGearRatio,
@@ -115,7 +115,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 		}
 		else if (m_vCanNodeIDs.Type[i] == MANIP_JOINT)
 		{
-			m_vpMotor[i]->getDriveParam()->setParam(
+			drive->getDriveParam()->setParam(
 					arm_drive_params.iEncIncrPerRevMot,
 					arm_drive_params.dBeltRatio,
 					arm_drive_params.dGearRatio,
@@ -135,7 +135,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 		}
 		else if (m_vCanNodeIDs.Type[i] == MAST_PAN)
 		{
-			m_vpMotor[i]->getDriveParam()->setParam(
+			drive->getDriveParam()->setParam(
 					pan_drive_params.iEncIncrPerRevMot,
 					pan_drive_params.dBeltRatio,
 					pan_drive_params.dGearRatio,
@@ -155,7 +155,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 		}
 		else if (m_vCanNodeIDs.Type[i] == MAST_TILT)
 		{
-			m_vpMotor[i]->getDriveParam()->setParam(
+			drive->getDriveParam()->setParam(
 					tilt_drive_params.iEncIncrPerRevMot,
 					tilt_drive_params.dBeltRatio,
 					tilt_drive_params.dGearRatio,
@@ -179,6 +179,8 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 			return false;
 		}
 
+		m_vpMotor.push_back(drive);
+        m_pCanCtrl->addDrive(drive);
 	}
 
     std::cout << "Platform_Driver::readConfiguration: Success" <<std::endl;
@@ -188,6 +190,13 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 
 bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorParamType steer_drive_params, GearMotorParamType walk_drive_params, GearMotorParamType pan_drive_params, GearMotorParamType tilt_drive_params, GearMotorParamType arm_drive_params, PltfCanParams can_params)
 {	
+	//* Platform configuration. CAN interface and CAN nodes setup.
+	if(!readConfiguration(wheel_drive_params, steer_drive_params, walk_drive_params, pan_drive_params, tilt_drive_params, arm_drive_params, can_params))
+	{
+		std::cout << "Platform_Driver::initPltf: Error in readConfiguration call" << std::endl;
+		return false;
+	}
+	
     std::cout << "Platform_Driver::initPltf: Initializing EtherCAT interface" << std::endl;
 
     if (!m_pCanCtrl->init())
@@ -196,24 +205,9 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
         return false;
     }
 
-	//* Platform configuration. CAN interface and CAN nodes setup.
-	if(!readConfiguration(wheel_drive_params, steer_drive_params, walk_drive_params, pan_drive_params, tilt_drive_params, arm_drive_params, can_params))
-	{
-		std::cout << "Platform_Driver::initPltf: Error in readConfiguration call" << std::endl;
-		return false;
-	}
-	
-	//* Initialize and start all motors
+	//* Start all motors
 	for (int i = 0; i < m_iNumMotors; i++)
 	{
-		std::cout << "Platform_Driver::initPltf: Initializing drive " << m_vCanNodeIDs.Name[i] << std::endl;
-
-		if (!m_vpMotor[i]->init())
-		{
-			std::cout << "Platform_Driver::initPltf: Initialization of drive " << m_vCanNodeIDs.Name[i] << " failed" << std::endl;
-			return false;
-		}
-	
 		if (can_params.Active[i])
 		{
 		    std::cout << "Platform_Driver::initPltf: Starting drive "<< m_vCanNodeIDs.Name[i] << std::endl;
@@ -225,7 +219,7 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
 			}
 
             //m_vpMotor[i]->commandVelocityRadSec(0.1);
-            m_vpMotor[i]->commandPositionRad(1.0);
+            m_vpMotor[i]->commandPositionRad(0.0);
 		}
 	}
 

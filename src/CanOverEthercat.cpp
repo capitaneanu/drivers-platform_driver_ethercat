@@ -1,6 +1,6 @@
 #include "CanOverEthercat.h"
+#include "CanDriveTwitter.h"
 #include "soem/ethercat.h"
-
 
 #define EC_TIMEOUTMON 500
 
@@ -28,14 +28,23 @@ bool CanOverEthercat::init()
        {
            printf("%d slaves found and configured.\n", ec_slavecount);
 
-           // Set preop to safeop hook
-           for (int slc = 1; slc <= ec_slavecount; slc++)
+           /* configure all drives via sdo */
+           for (CanDriveTwitter *drive : _drives_twitter)
            {
-               ec_slave[slc].PO2SOconfig = &CanOverEthercat::driveSetup;
+               drive->config();
            }
 
            ec_config_map(&_io_map);
            ec_configdc();
+
+           /* set pointers to pdo map for all drives */
+           for (CanDriveTwitter *drive : _drives_twitter)
+           {
+               unsigned int can_id = drive->getCanId();
+
+               drive->setInputPdo(ec_slave[can_id].inputs);
+               drive->setOutputPdo(ec_slave[can_id].outputs);
+           }
 
            printf("Slaves mapped, state to SAFE_OP.\n");
            /* wait for all slaves to reach SAFE_OP state */
@@ -137,6 +146,11 @@ bool CanOverEthercat::isInit()
     return _is_initialized;
 }
 
+void CanOverEthercat::addDrive(CanDriveTwitter *drive)
+{
+    _drives_twitter.push_back(drive);
+}
+
 bool CanOverEthercat::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int *data)
 {
     int fieldsize = sizeof(data);
@@ -165,46 +179,6 @@ unsigned char *CanOverEthercat::getInputPdoPtr(uint16_t slave)
 unsigned char *CanOverEthercat::getOutputPdoPtr(uint16_t slave)
 {
     return ec_slave[slave].outputs;
-}
-
-int CanOverEthercat::driveSetup(uint16_t slave)
-{
-    // set RxPDO map
-    sdoWrite(slave, 0x1c12, 0, 1, 0x00);   // disable
-    sdoWrite(slave, 0x1c12, 1, 2, 0x160a); // control word
-    sdoWrite(slave, 0x1c12, 2, 2, 0x160b); // mode of operation
-    sdoWrite(slave, 0x1c12, 3, 2, 0x160f); // target position
-    sdoWrite(slave, 0x1c12, 4, 2, 0x161c); // target velocity
-    sdoWrite(slave, 0x1c12, 5, 2, 0x160c); // target torque
-    sdoWrite(slave, 0x1c12, 0, 1, 0x05);   // enable
-
-    // set TxPDO map
-    sdoWrite(slave, 0x1c13, 0, 1, 0x00);   // disable
-    sdoWrite(slave, 0x1c13, 1, 2, 0x1a0a); // status word
-    sdoWrite(slave, 0x1c13, 2, 2, 0x1a0b); // mode of operation display
-    sdoWrite(slave, 0x1c13, 3, 2, 0x1a0e); // actual position
-    sdoWrite(slave, 0x1c13, 4, 2, 0x1a11); // actual velocity
-    sdoWrite(slave, 0x1c13, 5, 2, 0x1a13); // actual torque
-    sdoWrite(slave, 0x1c13, 5, 2, 0x1a1d); // analog input
-    sdoWrite(slave, 0x1c13, 0, 1, 0x06);   // enable
-
-    // set commutation
-    sdoWrite(slave, 0x3034, 17, 4, 0x00000003); // commutation method
-    sdoWrite(slave, 0x31d6, 1, 4, 0x41f00000);  // stepper commutation desired current
-
-    // set limits
-    sdoWrite(slave, 0x6072, 0, 2, 0x0c76);      // max torque (from stall torque)
-    sdoWrite(slave, 0x6073, 0, 2, 0x0b89);      // max current (from stall current)
-    sdoWrite(slave, 0x6075, 0, 4, 0x00000292);  // motor rated current (657 mA)
-    sdoWrite(slave, 0x6076, 0, 4, 0x0000000b);  // motor rated torque (11 mNm)
-    sdoWrite(slave, 0x607d, 1, 4, 0xfffb3e0d);  // min position limit (-100 deg)
-    sdoWrite(slave, 0x607d, 2, 4, 0x0004c1f3);  // max position limit (100 deg)
-    sdoWrite(slave, 0x607f, 0, 4, 0x00010aab);  // max profile velocity (8000 rpm)
-
-    // set profile motion parameters
-    sdoWrite(slave, 0x6081, 0, 4, 0x00001388);  // profile velocity (5000 inc/sec)
-    sdoWrite(slave, 0x6083, 0, 4, 0x000186A0);  // profile acceleration (100000 inc/sec^2)
-    sdoWrite(slave, 0x6084, 0, 4, 0x000186A0);  // profile decelaration (100000 inc/sec^2)
 }
 
 void *CanOverEthercat::pdoCycle(void *ptr)

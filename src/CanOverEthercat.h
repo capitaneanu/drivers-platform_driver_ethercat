@@ -2,6 +2,9 @@
 #define CANOVERETHERCAT_INCLUDEDEF_H
 
 #include <string>
+#include <vector>
+
+class CanDriveTwitter;
 
 class CanOverEthercat
 {
@@ -11,6 +14,7 @@ public:
 	bool init();
 	void close();
 	bool isInit();
+    void addDrive(CanDriveTwitter *drive);
     unsigned char *getInputPdoPtr(uint16_t slave);
     unsigned char *getOutputPdoPtr(uint16_t slave);
 
@@ -20,12 +24,12 @@ private:
     char _io_map[4096];
     std::string _device_name;
     bool _is_initialized;
+    std::vector<CanDriveTwitter *> _drives_twitter;
     pthread_t _thread_handle;
 
     static int _expected_wkc;
     static volatile int _wkc;
 
-    static int driveSetup(uint16_t slave);
     static void *pdoCycle(void *ptr);
 };
 

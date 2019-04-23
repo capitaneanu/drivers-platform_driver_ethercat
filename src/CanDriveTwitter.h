@@ -1,12 +1,11 @@
 #ifndef CANDRIVETWITTER_INCLUDEDEF_H
 #define CANDRIVETWITTER_INCLUDEDEF_H
 
-
-
 //* include files ---------------------------------------------
 
-#include "CanOverEthercat.h"
 #include "DriveParam.h"
+
+class CanOverEthercat;
 
 /**
  * Interface description for a drive type of class.
@@ -24,19 +23,9 @@ public:
 	 */
 	~CanDriveTwitter();
 
-	/**
-	 * Initializes the driver.
-	 * Call this function once after construction.
-	 * @return True if initialization was successful. False otherwise.
-	 */
-	bool init();
-	
-	/**
-	 * Check if the driver is already initialized.
-	 * This is necessary if a drive gets switched off during runtime.
-	 * @return true if initialization occurred already, false if not.
-	 */
-	bool isInitialized();
+	bool config();
+    void setInputPdo(unsigned char *input_pdo);
+    void setOutputPdo(unsigned char *output_pdo);
 
 	/**
 	 * Brings the drive to operation enable state. 
@@ -118,6 +107,8 @@ public:
 	 * @return true if the result of the process is successful
 	 */
 	bool requestEmergencyStop();
+
+    unsigned int getCanId();
 
 	/**
 	 * Sets the drive parameters.
@@ -285,8 +276,8 @@ private:
     unsigned int _can_id;
     std::string _drive_name;
     DriveParam _drive_param;
-    TxPdo *input;
-    RxPdo *output;
+    TxPdo *_input;
+    RxPdo *_output;
 
 	/**
 	 * Returns the state of the drive

@@ -2,28 +2,87 @@
 #include <unistd.h>
 
 #include "CanDriveTwitter.h"
+#include "CanOverEthercat.h"
 
 CanDriveTwitter::CanDriveTwitter(CanOverEthercat *can_interface, unsigned int can_id, std::string drive_name)
-: _can_interface(can_interface), _can_id(can_id), _drive_name(drive_name)
+: _can_interface(can_interface), _can_id(can_id), _drive_name(drive_name), _input(NULL), _output(NULL)
 
 {
-    input = (TxPdo *) _can_interface->getInputPdoPtr(_can_id);
-    output = (RxPdo *) _can_interface->getOutputPdoPtr(_can_id);
-
-    output->control_word = 0x0004; // disable quick stop & disable voltage
-    output->operation_mode = 0;
-    output->target_position = 0;
-    output->target_velocity = 0;
-    output->target_torque = 0;
 }
 
 CanDriveTwitter::~CanDriveTwitter()
 {
 }
 
-bool CanDriveTwitter::init()
+bool CanDriveTwitter::config()
 {
+    // set RxPDO map
+    _can_interface->sdoWrite(_can_id, 0x1c12, 0, 1, 0x00);   // disable
+    _can_interface->sdoWrite(_can_id, 0x1c12, 1, 2, 0x160a); // control word
+    _can_interface->sdoWrite(_can_id, 0x1c12, 2, 2, 0x160b); // mode of operation
+    _can_interface->sdoWrite(_can_id, 0x1c12, 3, 2, 0x160f); // target position
+    _can_interface->sdoWrite(_can_id, 0x1c12, 4, 2, 0x161c); // target velocity
+    _can_interface->sdoWrite(_can_id, 0x1c12, 5, 2, 0x160c); // target torque
+    _can_interface->sdoWrite(_can_id, 0x1c12, 0, 1, 0x05);   // enable
+
+    // set TxPDO map
+    _can_interface->sdoWrite(_can_id, 0x1c13, 0, 1, 0x00);   // disable
+    _can_interface->sdoWrite(_can_id, 0x1c13, 1, 2, 0x1a0a); // status word
+    _can_interface->sdoWrite(_can_id, 0x1c13, 2, 2, 0x1a0b); // mode of operation display
+    _can_interface->sdoWrite(_can_id, 0x1c13, 3, 2, 0x1a0e); // actual position
+    _can_interface->sdoWrite(_can_id, 0x1c13, 4, 2, 0x1a11); // actual velocity
+    _can_interface->sdoWrite(_can_id, 0x1c13, 5, 2, 0x1a13); // actual torque
+    _can_interface->sdoWrite(_can_id, 0x1c13, 5, 2, 0x1a1d); // analog input
+    _can_interface->sdoWrite(_can_id, 0x1c13, 0, 1, 0x06);   // enable
+
+    // set commutation
+    _can_interface->sdoWrite(_can_id, 0x3034, 17, 4, 0x00000003); // commutation method
+    _can_interface->sdoWrite(_can_id, 0x31d6, 1, 4, 0x41f00000);  // stepper commutation desired current
+
+    // set limits
+    _can_interface->sdoWrite(_can_id, 0x6072, 0, 2, 0x0c76);      // max torque (from stall torque)
+    unsigned int rated_current = _drive_param.getNominalCurrent() * 1000.0;
+    unsigned int max_current;
+
+    if (rated_current == 0)
+    {
+        max_current = 1;
+    }
+    else
+    {
+        max_current = (_drive_param.getCurrMax() * 1000.0 * 1000.0) / rated_current;
+    }
+
+    _can_interface->sdoWrite(_can_id, 0x6073, 0, 2, max_current);    // max current (from stall current, in thousands of rated current)
+    _can_interface->sdoWrite(_can_id, 0x6075, 0, 4, rated_current);  // motor rated current (in mNm)
+    _can_interface->sdoWrite(_can_id, 0x6076, 0, 4, 0x0000000b);     // motor rated torque (11 mNm)
+    _can_interface->sdoWrite(_can_id, 0x607d, 1, 4, _drive_param.getPosMin());  // min position limit
+    _can_interface->sdoWrite(_can_id, 0x607d, 2, 4, _drive_param.getPosMax());  // max position limit
+    _can_interface->sdoWrite(_can_id, 0x607f, 0, 4, _drive_param.getVelMax());  // max profile velocity
+
+    // set profile motion parameters
+    _can_interface->sdoWrite(_can_id, 0x6081, 0, 4, _drive_param.getPtpVelDefault());  // profile velocity
+    _can_interface->sdoWrite(_can_id, 0x6083, 0, 4, _drive_param.getMaxAcc());  // profile acceleration
+    _can_interface->sdoWrite(_can_id, 0x6084, 0, 4, _drive_param.getMaxDec());  // profile decelaration
+
+    // TODO: check wkc
     return true;
+}
+
+void CanDriveTwitter::setInputPdo(unsigned char *input_pdo)
+{
+    _input = (TxPdo *)input_pdo;
+}
+
+void CanDriveTwitter::setOutputPdo(unsigned char *output_pdo)
+{
+    _output = (RxPdo *)output_pdo;
+
+    _output->control_word = 0x0004; // disable quick stop & disable voltage
+    _output->operation_mode = 0;
+    _output->target_position = 0;
+    _output->target_velocity = 0;
+    _output->target_torque = 0;
 }
 
 bool CanDriveTwitter::startup()
@@ -36,24 +95,24 @@ bool CanDriveTwitter::startup()
         switch (state)
         {
         case ST_FAULT:
-            output->control_word = 0x0080; // fault reset
+            _output->control_word = 0x0080; // fault reset
             break;
         case ST_QUICK_STOP_ACTIVE:
-            output->control_word = 0x0004; // disable quick stop
-            break; 
+            _output->control_word = 0x0004; // disable quick stop
+            break;
         case ST_SWITCH_ON_DISABLED:
-            output->control_word = 0x0006; // enable voltage
+            _output->control_word = 0x0006; // enable voltage
             break;
         case ST_READY_TO_SWITCH_ON:
-            output->control_word = 0x0007; // switch on
+            _output->control_word = 0x0007; // switch on
             break;
         case ST_SWITCHED_ON:
-            output->control_word = 0x000f; // enable operation
+            _output->control_word = 0x000f; // enable operation
             break;
         default:
             break;
         }
-        
+
         usleep(100000); // sleep 0.1 s
         state = readDriveState();
 
@@ -78,24 +137,24 @@ bool CanDriveTwitter::shutdown()
         switch (state)
         {
         case ST_OPERATION_ENABLE:
-            output->control_word = 0x0007; // disable operation 
+            _output->control_word = 0x0007; // disable operation
             break;
         case ST_SWITCHED_ON:
-            output->control_word = 0x0006; // switch off
+            _output->control_word = 0x0006; // switch off
             break;
         case ST_READY_TO_SWITCH_ON:
-            output->control_word = 0x0004; // disable voltage
+            _output->control_word = 0x0004; // disable voltage
             break;
         case ST_FAULT:
-            output->control_word = 0x0080; // fault reset
+            _output->control_word = 0x0080; // fault reset
             break;
         case ST_QUICK_STOP_ACTIVE:
-            output->control_word = 0x0004; // disable quick stop & disable voltage
-            break; 
+            _output->control_word = 0x0004; // disable quick stop & disable voltage
+            break;
         default:
-            break; 
+            break;
         }
-        
+
         usleep(10000); // sleep 0.01 s
         state = readDriveState();
 
@@ -117,12 +176,12 @@ bool CanDriveTwitter::reset()
 
 CanDriveTwitter::OperationMode CanDriveTwitter::readOperationMode()
 {
-    return (OperationMode) input->operation_mode_display;
+    return (OperationMode) _input->operation_mode_display;
 }
 
 bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
 {
-    output->operation_mode = mode; 
+    _output->operation_mode = mode;
 
     int cnt = 1000;
 
@@ -147,9 +206,9 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
 {
     commandOperationMode(OM_PROFILE_POSITION);
     //commandOperationMode(OM_CYCSYNC_POSITION);
-    
-    output->target_position = _drive_param.PosGearRadToPosMotIncr(position_rad);
-    output->control_word |= 0x0030; // new set point & change set point immediately
+
+    _output->target_position = _drive_param.PosGearRadToPosMotIncr(position_rad);
+    _output->control_word |= 0x0030; // new set point & change set point immediately
 
     int cnt = 1000;
 
@@ -159,19 +218,20 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
 
         if (cnt-- == 0)
         {
-	        std::cout << "CanDriveTwitter::commandPostionRad: New set point " << output->target_position << " was not acknowledged for drive " << _drive_name << std::endl;
+	        std::cout << "CanDriveTwitter::commandPostionRad: New set point " << _output->target_position << " was not acknowledged for drive " << _drive_name << std::endl;
+            break;
         }
     }
 
-    output->control_word &= 0xffef; // no new set point 
+    _output->control_word &= 0xffef; // no new set point
 
-    std::cout << "CanDriveTwitter::commandPositionRad: Drive: " << _drive_name << " Current position: " << input->actual_position << " Target position: " << output->target_position << std::endl;
+    std::cout << "CanDriveTwitter::commandPositionRad: Drive: " << _drive_name << " Current position: " << _input->actual_position << " Target position: " << _output->target_position << std::endl;
 }
 
 void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
 {
     commandOperationMode(OM_PROFILE_VELOCITY);
-    output->target_velocity = _drive_param.VelGearRadSToVelMotIncrPeriod(velocity_rad_sec);
+    _output->target_velocity = _drive_param.VelGearRadSToVelMotIncrPeriod(velocity_rad_sec);
 }
 
 void CanDriveTwitter::commandTorqueNm(double torque_nm)
@@ -179,48 +239,48 @@ void CanDriveTwitter::commandTorqueNm(double torque_nm)
     commandOperationMode(OM_PROFILE_TORQUE);
 
     int rated_torque = 11; // 11 mNm
-    output->target_torque = torque_nm * 1000 * 1000 / rated_torque;
+    _output->target_torque = torque_nm * 1000 * 1000 / rated_torque;
 }
 
 bool CanDriveTwitter::checkTargetReached()
 {
-    unsigned char bit10 = (unsigned char) ((input->status_word >> 10) & 0x0001);
+    unsigned char bit10 = (unsigned char) ((_input->status_word >> 10) & 0x0001);
 
     return (bool) bit10;
 }
 
 bool CanDriveTwitter::checkSetPointAcknowledge()
 {
-    unsigned char bit12 = (unsigned char) ((input->status_word >> 12) & 0x0001);
+    unsigned char bit12 = (unsigned char) ((_input->status_word >> 12) & 0x0001);
 
     return (bool) bit12;
 }
 
 double CanDriveTwitter::readPositionRad()
 {
-    return _drive_param.PosMotIncrToPosGearRad(input->actual_position);
+    return _drive_param.PosMotIncrToPosGearRad(_input->actual_position);
 }
 
 double CanDriveTwitter::readVelocityRadSec()
 {
-    return _drive_param.VelMotIncrPeriodToVelGearRadS(input->actual_velocity);
+    return _drive_param.VelMotIncrPeriodToVelGearRadS(_input->actual_velocity);
 }
 
 double CanDriveTwitter::readTorqueNm()
 {
     int rated_torque = 11; // 11 mNm
 
-    return input->actual_torque * rated_torque / (1000 * 1000);
+    return _input->actual_torque * rated_torque / (1000 * 1000);
 }
 
 double CanDriveTwitter::readAnalogInput()
 {
-    return input->analog_input;
+    return _input->analog_input;
 }
 
 CanDriveTwitter::DriveState CanDriveTwitter::readDriveState()
 {
-    unsigned char status_lower = (unsigned char) input->status_word;
+    unsigned char status_lower = (unsigned char) _input->status_word;
     unsigned char bits0to3 = status_lower & 0x0f;
     unsigned char bit5 = (status_lower >> 5) & 0x01;
     unsigned char bit6 = (status_lower >> 6) & 0x01;
@@ -263,20 +323,20 @@ bool CanDriveTwitter::isError()
 
 unsigned int CanDriveTwitter::getError()
 {
-    unsigned char status_upper = (unsigned char) (input->status_word >> 8);
+    unsigned char status_upper = (unsigned char) (_input->status_word >> 8);
 
-    return status_upper; 
+    return status_upper;
 }
 
 bool CanDriveTwitter::requestEmergencyStop()
 {
-    uint16_t control_word = output->control_word;
+    uint16_t control_word = _output->control_word;
 
     // enable quick stop
     control_word &= 0b111111101111011;
     control_word |= 0b000000000000010;
 
-    output->control_word = control_word;
+    _output->control_word = control_word;
 
     int cnt = 100;
 
@@ -296,6 +356,11 @@ bool CanDriveTwitter::requestEmergencyStop()
     while (state != ST_QUICK_STOP_ACTIVE);
 
     return true;
+}
+
+unsigned int CanDriveTwitter::getCanId()
+{
+    return _can_id;
 }
 
 void CanDriveTwitter::setDriveParam(DriveParam drive_param)
