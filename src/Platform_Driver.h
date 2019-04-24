@@ -132,12 +132,6 @@ public:
 	bool resetNode(int iCanIdent);
 
 	/**
-	 * Gets the number of motors in the platform.
-	 * @return Integer value of the number of motors (nodes) in the platform
-	 */
-	int getNumMotors();
-
-	/**
 	 * Sends position (and velocity) command for specific can node (PTP Motion).
 	 * Node must be in position control mode
 	 * @param iCanIdent selects the can node
@@ -209,10 +203,8 @@ private:
     std::vector<CanDriveTwitter*> m_vpMotor;						/**< Motor controllers. Pointer to each motor's CanDrive-Itf */
     PltfCanParams m_vCanNodeIDs;								/**< Array of CanNodeTypes. Keeps information of all Node IDs and high level description */
 
-	std::string _can_address;								/**< Address of the can device interface in the system Ex: "/dev/pcan0" */
-	int m_iCanItfType;										/**< Type of CAN interface device */
-	int m_iNumMotors;										/**< Number of motors in the platform */
-	int m_iNumNodes;										/**< Number of CAN nodes in the platform. Includes the 'virtual' group nodes */
+    int _num_nodes;
+	std::string _can_address;								/**< Address of the can device interface in the system */
 };
 
 

@@ -14,7 +14,7 @@ public:
 	bool init();
 	void close();
 	bool isInit();
-    void addDrive(CanDriveTwitter *drive);
+    bool addDrive(CanDriveTwitter *drive);
     unsigned char *getInputPdoPtr(uint16_t slave);
     unsigned char *getOutputPdoPtr(uint16_t slave);
 

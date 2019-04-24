@@ -19,6 +19,11 @@ CanOverEthercat::~CanOverEthercat()
 
 bool CanOverEthercat::init()
 {
+    if (isInit())
+        return true;
+
+    _is_initialized = false;
+
     /* initialise SOEM, bind socket to ifname */
     if (ec_init(_device_name.c_str()))
     {
@@ -26,11 +31,25 @@ bool CanOverEthercat::init()
        /* find and auto-config slaves */
        if (ec_config_init(FALSE) > 0)
        {
-           printf("%d slaves found and configured.\n", ec_slavecount);
+           printf("%d slaves found.\n", ec_slavecount);
+
+           if (_drives_twitter.size() != ec_slavecount)
+           {
+               printf("Number of drives (%d) does not equal number of slaves.\n", _drives_twitter.size());
+               return false;
+           }
 
            /* configure all drives via sdo */
            for (CanDriveTwitter *drive : _drives_twitter)
            {
+               unsigned int can_id = drive->getCanId();
+
+               if (can_id <= 0 || can_id > ec_slavecount)
+               {
+                   printf("Slave id %d outside range.\n", can_id);
+                   return false;
+               }
+
                drive->configure();
            }
 
@@ -105,7 +124,6 @@ bool CanOverEthercat::init()
        else
        {
            printf("No slaves found.\n");
-           _is_initialized = false;
 
            printf("Close socket\n");
            ec_close();
@@ -116,7 +134,6 @@ bool CanOverEthercat::init()
     else
     {
         printf("ec_init on %s not succeeded.\n", _device_name.c_str());
-        _is_initialized = false;
         return false;
     }
 }
@@ -146,9 +163,17 @@ bool CanOverEthercat::isInit()
     return _is_initialized;
 }
 
-void CanOverEthercat::addDrive(CanDriveTwitter *drive)
+bool CanOverEthercat::addDrive(CanDriveTwitter *drive)
 {
+    if (isInit())
+    {
+        printf("EtherCAT interface already initialized. Drive cannot be added afterwards.\n");
+        return false;
+    }
+
     _drives_twitter.push_back(drive);
+
+    return true;
 }
 
 bool CanOverEthercat::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int *data)

@@ -11,10 +11,7 @@
 
 Platform_Driver::Platform_Driver(int num_motors, int num_nodes, int can_dev_type, std::string can_dev_addr, int watchdog)
 {	
-
-	m_iNumMotors = num_motors;
-	m_iNumNodes = num_nodes;
-	m_iCanItfType = can_dev_type;
+    _num_nodes = num_nodes;
 	_can_address = can_dev_addr;
     m_pCanCtrl = new CanOverEthercat(_can_address);
 }
@@ -26,11 +23,11 @@ Platform_Driver::~Platform_Driver()
 		delete m_pCanCtrl;
 	}
 
-	for(unsigned int i = 0; i < m_vpMotor.size(); i++)
+	for(auto drive : m_vpMotor)
 	{
-		if (m_vpMotor[i] != NULL)
+		if (drive != NULL)
 		{
-			delete m_vpMotor[i];
+			delete drive;
 		}
 	}	
 
@@ -39,15 +36,18 @@ Platform_Driver::~Platform_Driver()
 
 bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, GearMotorParamType steer_drive_params, GearMotorParamType walk_drive_params, GearMotorParamType pan_drive_params, GearMotorParamType tilt_drive_params, GearMotorParamType arm_drive_params, PltfCanParams can_params)
 {
-    m_vCanNodeIDs = can_params;
-
-	if (static_cast<unsigned int>(m_iNumNodes) != m_vCanNodeIDs.CanId.size())
+	if (can_params.CanId.size() != _num_nodes 
+        || can_params.Name.size() != _num_nodes 
+        || can_params.Type.size() != _num_nodes
+        || can_params.Active.size() != _num_nodes)
 	{
-		std::cout << "Platform_Driver::ReadConfiguration: The number of motors does not match the size of CAN Node IDs array" <<std::endl;
+		std::cout << "Platform_Driver::ReadConfiguration: The size of the can parameter vectors (CanId, Name, Type, Active) do not match the stated number of nodes" <<std::endl;
 		return false;
 	}
 
-	for (int i = 0; i < m_iNumNodes; i++)
+    m_vCanNodeIDs = can_params;
+
+	for (int i = 0; i < _num_nodes; i++)
 	{
 		//* add new Twitter
         CanDriveTwitter *drive = new CanDriveTwitter(m_pCanCtrl, m_vCanNodeIDs.CanId[i], m_vCanNodeIDs.Name[i]);
@@ -206,7 +206,7 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
     }
 
 	//* Start all motors
-	for (int i = 0; i < m_iNumMotors; i++)
+	for (int i = 0; i < m_vpMotor.size(); i++)
 	{
 		if (can_params.Active[i])
 		{
@@ -231,9 +231,9 @@ bool Platform_Driver::shutdownPltf()
 {
 	bool bRet = true;
 	//* shut down all motors
-	for(int i = 0; i < m_iNumMotors; i++)
+	for(auto drive : m_vpMotor)
 	{
-		bRet &= m_vpMotor[i]->shutdown();
+		bRet &= drive->shutdown();
 	}
 	return bRet;
 }
@@ -259,7 +259,7 @@ bool Platform_Driver::resetPltf()
 	bool bRetMotor = true;
 	bool bRet = true;
 
-	for(int i = 0; i < m_iNumMotors; i++)
+	for(int i = 0; i < m_vpMotor.size(); i++)
 	{
 		bRetMotor = m_vpMotor[i]->reset();
 
@@ -335,9 +335,4 @@ bool Platform_Driver::getNodeData(int iCanIdent,double* pdAngleGearRad, double* 
 void Platform_Driver::getNodeAnalogInput(int iCanIdent,double* pdAnalogInput)
 {
 	*pdAnalogInput = m_vpMotor[iCanIdent]->readAnalogInput();
-}
-
-int Platform_Driver::getNumMotors()
-{
-	return m_iNumMotors;
 }
