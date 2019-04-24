@@ -23,7 +23,7 @@ public:
 	 */
 	~CanDriveTwitter();
 
-	bool config();
+	bool configure();
     void setInputPdo(unsigned char *input_pdo);
     void setOutputPdo(unsigned char *output_pdo);
 

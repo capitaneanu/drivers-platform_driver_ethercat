@@ -14,7 +14,7 @@ CanDriveTwitter::~CanDriveTwitter()
 {
 }
 
-bool CanDriveTwitter::config()
+bool CanDriveTwitter::configure()
 {
     // set RxPDO map
     _can_interface->sdoWrite(_can_id, 0x1c12, 0, 1, 0x00);   // disable
@@ -181,11 +181,16 @@ CanDriveTwitter::OperationMode CanDriveTwitter::readOperationMode()
 
 bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
 {
+    OperationMode current_mode = readOperationMode();
+
+    if (current_mode == mode)
+    {
+        return true;
+    }
+
     _output->operation_mode = mode;
 
     int cnt = 1000;
-
-    OperationMode current_mode = readOperationMode();
 
     while (current_mode != mode)
     {
@@ -199,6 +204,8 @@ bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
         current_mode = readOperationMode();
     }
 
+    std::cout << "CanDriveTwitter::setOperationMode: Successfully changed operation mode for drive " << _drive_name << " to " << current_mode << std::endl;
+
     return true;
 }
 
@@ -207,7 +214,7 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
     commandOperationMode(OM_PROFILE_POSITION);
     //commandOperationMode(OM_CYCSYNC_POSITION);
 
-    _output->target_position = _drive_param.PosGearRadToPosMotIncr(position_rad);
+    _output->target_position = _drive_param.getSign() * _drive_param.PosGearRadToPosMotIncr(position_rad);
     _output->control_word |= 0x0030; // new set point & change set point immediately
 
     int cnt = 1000;
@@ -231,7 +238,7 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
 void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
 {
     commandOperationMode(OM_PROFILE_VELOCITY);
-    _output->target_velocity = _drive_param.VelGearRadSToVelMotIncrPeriod(velocity_rad_sec);
+    _output->target_velocity = _drive_param.getSign() * _drive_param.VelGearRadSToVelMotIncrPeriod(velocity_rad_sec);
 }
 
 void CanDriveTwitter::commandTorqueNm(double torque_nm)
@@ -239,7 +246,9 @@ void CanDriveTwitter::commandTorqueNm(double torque_nm)
     commandOperationMode(OM_PROFILE_TORQUE);
 
     int rated_torque = 11; // 11 mNm
-    _output->target_torque = torque_nm * 1000 * 1000 / rated_torque;
+
+    // TODO: transform from load to motor torque
+    _output->target_torque = _drive_param.getSign() * torque_nm * 1000 * 1000 / rated_torque;
 }
 
 bool CanDriveTwitter::checkTargetReached()
@@ -258,19 +267,20 @@ bool CanDriveTwitter::checkSetPointAcknowledge()
 
 double CanDriveTwitter::readPositionRad()
 {
-    return _drive_param.PosMotIncrToPosGearRad(_input->actual_position);
+    return _drive_param.getSign() * _drive_param.PosMotIncrToPosGearRad(_input->actual_position);
 }
 
 double CanDriveTwitter::readVelocityRadSec()
 {
-    return _drive_param.VelMotIncrPeriodToVelGearRadS(_input->actual_velocity);
+    return _drive_param.getSign() * _drive_param.VelMotIncrPeriodToVelGearRadS(_input->actual_velocity);
 }
 
 double CanDriveTwitter::readTorqueNm()
 {
     int rated_torque = 11; // 11 mNm
 
-    return _input->actual_torque * rated_torque / (1000 * 1000);
+    // TODO: transform from motor to load torque
+    return _drive_param.getSign() * _input->actual_torque * rated_torque / (1000 * 1000);
 }
 
 double CanDriveTwitter::readAnalogInput()

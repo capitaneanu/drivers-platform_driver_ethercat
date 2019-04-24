@@ -31,7 +31,7 @@ bool CanOverEthercat::init()
            /* configure all drives via sdo */
            for (CanDriveTwitter *drive : _drives_twitter)
            {
-               drive->config();
+               drive->configure();
            }
 
            ec_config_map(&_io_map);
