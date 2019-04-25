@@ -1,29 +1,31 @@
 //* general includes
+#include <cstdlib>
+#include <future>
+#include <iostream>
 #include <math.h>
-#include <vector>
+#include <pthread.h>
 #include <signal.h>
 #include <sys/time.h>
-#include <pthread.h>
-#include <cstdlib>
-#include <iostream>
+#include <tuple>
+#include <vector>
 
 #include "Platform_Driver.h"
 
-Platform_Driver::Platform_Driver(int num_motors, int num_nodes, int can_dev_type, std::string can_dev_addr, int watchdog)
+Platform_Driver::Platform_Driver(unsigned int num_motors, unsigned int num_nodes, unsigned int can_dev_type, std::string can_dev_addr, unsigned int watchdog)
 {	
     _num_nodes = num_nodes;
 	_can_address = can_dev_addr;
-    m_pCanCtrl = new CanOverEthercat(_can_address);
+    _can_interface = new CanOverEthercat(_can_address);
 }
 
 Platform_Driver::~Platform_Driver()
 {
-	if (m_pCanCtrl != NULL)
+	if (_can_interface != NULL)
 	{
-		delete m_pCanCtrl;
+		delete _can_interface;
 	}
 
-	for(auto drive : m_vpMotor)
+	for(auto drive : _can_drives)
 	{
 		if (drive != NULL)
 		{
@@ -36,8 +38,8 @@ Platform_Driver::~Platform_Driver()
 
 bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, GearMotorParamType steer_drive_params, GearMotorParamType walk_drive_params, GearMotorParamType pan_drive_params, GearMotorParamType tilt_drive_params, GearMotorParamType arm_drive_params, PltfCanParams can_params)
 {
-	if (can_params.CanId.size() != _num_nodes 
-        || can_params.Name.size() != _num_nodes 
+	if (can_params.CanId.size() != _num_nodes
+        || can_params.Name.size() != _num_nodes
         || can_params.Type.size() != _num_nodes
         || can_params.Active.size() != _num_nodes)
 	{
@@ -45,15 +47,15 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 		return false;
 	}
 
-    m_vCanNodeIDs = can_params;
+    _can_parameters = can_params;
 
-	for (int i = 0; i < _num_nodes; i++)
+	for (unsigned int i = 0; i < _num_nodes; i++)
 	{
 		//* add new Twitter
-        CanDriveTwitter *drive = new CanDriveTwitter(m_pCanCtrl, m_vCanNodeIDs.CanId[i], m_vCanNodeIDs.Name[i]);
+        CanDriveTwitter *drive = new CanDriveTwitter(_can_interface, _can_parameters.CanId[i], _can_parameters.Name[i]);
 
 		//* set Motor parameters depending on the type of motor
-		if (m_vCanNodeIDs.Type[i] == WHEEL_DRIVE)
+		if (_can_parameters.Type[i] == WHEEL_DRIVE)
 		{
 			drive->getDriveParam()->setParam(
 					wheel_drive_params.iEncIncrPerRevMot,
@@ -73,7 +75,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					wheel_drive_params.dAnalogFactor,
 					wheel_drive_params.dNominalCurrent);
 		}
-		else if (m_vCanNodeIDs.Type[i] == WHEEL_STEER)
+		else if (_can_parameters.Type[i] == WHEEL_STEER)
 		{
 			drive->getDriveParam()->setParam(
 					steer_drive_params.iEncIncrPerRevMot,
@@ -93,7 +95,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					steer_drive_params.dAnalogFactor,
 					steer_drive_params.dNominalCurrent);
 		}
-		else if (m_vCanNodeIDs.Type[i] == WHEEL_WALK)
+		else if (_can_parameters.Type[i] == WHEEL_WALK)
 		{
 			drive->getDriveParam()->setParam(
 					walk_drive_params.iEncIncrPerRevMot,
@@ -113,7 +115,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					walk_drive_params.dAnalogFactor,
 					walk_drive_params.dNominalCurrent);
 		}
-		else if (m_vCanNodeIDs.Type[i] == MANIP_JOINT)
+		else if (_can_parameters.Type[i] == MANIP_JOINT)
 		{
 			drive->getDriveParam()->setParam(
 					arm_drive_params.iEncIncrPerRevMot,
@@ -133,7 +135,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					arm_drive_params.dAnalogFactor,
 					arm_drive_params.dNominalCurrent);
 		}
-		else if (m_vCanNodeIDs.Type[i] == MAST_PAN)
+		else if (_can_parameters.Type[i] == MAST_PAN)
 		{
 			drive->getDriveParam()->setParam(
 					pan_drive_params.iEncIncrPerRevMot,
@@ -153,7 +155,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					pan_drive_params.dAnalogFactor,
 					pan_drive_params.dNominalCurrent);
 		}
-		else if (m_vCanNodeIDs.Type[i] == MAST_TILT)
+		else if (_can_parameters.Type[i] == MAST_TILT)
 		{
 			drive->getDriveParam()->setParam(
 					tilt_drive_params.iEncIncrPerRevMot,
@@ -175,12 +177,12 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 		}
 		else
 		{
-			std::cout << "Platform_Driver::ReadConfiguration: Unknown type "<< m_vCanNodeIDs.Type[i] <<" of motor "<< m_vCanNodeIDs.Name[i] <<std::endl;
+			std::cout << "Platform_Driver::ReadConfiguration: Unknown type "<< _can_parameters.Type[i] <<" of motor "<< _can_parameters.Name[i] <<std::endl;
 			return false;
 		}
 
-		m_vpMotor.push_back(drive);
-        m_pCanCtrl->addDrive(drive);
+		_can_drives.push_back(drive);
+        _can_interface->addDrive(drive);
 	}
 
     std::cout << "Platform_Driver::readConfiguration: Success" <<std::endl;
@@ -199,29 +201,63 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
 	
     std::cout << "Platform_Driver::initPltf: Initializing EtherCAT interface" << std::endl;
 
-    if (!m_pCanCtrl->init())
+    if (!_can_interface->init())
     {
         std::cout << "Platform_Driver::initPltf: Could not initialize EtherCAT interface" << std::endl;
         return false;
     }
 
-	//* Start all motors
-	for (int i = 0; i < m_vpMotor.size(); i++)
+	//* Start all drives in groups of 6
+    unsigned int i = 0;
+
+    while (i < _num_nodes)
 	{
-		if (can_params.Active[i])
-		{
-		    std::cout << "Platform_Driver::initPltf: Starting drive "<< m_vCanNodeIDs.Name[i] << std::endl;
+        std::vector<std::tuple<CanDriveTwitter *, std::future<bool>>> future_tuples;
 
-			if (!m_vpMotor[i]->startup())
-			{
-				std::cout << "Platform_Driver::initPltf: Startup of drive " << m_vCanNodeIDs.Name[i] << " failed" << std::endl;
-				return false;
-			}
+        unsigned int j = 0;
 
-            //m_vpMotor[i]->commandVelocityRadSec(0.1);
-            m_vpMotor[i]->commandPositionRad(0.0);
-		}
+        while (j < 6)
+        {
+            if (can_params.Active[i])
+            {
+                 CanDriveTwitter* drive = _can_drives[i];
+                 std::cout << "Platform_Driver::initPltf: Starting drive " << drive->getDriveName() << std::endl;
+
+                 auto future = std::async(std::launch::async, &CanDriveTwitter::startup, drive);
+                 auto tuple = std::make_tuple(drive, std::move(future));
+
+                 future_tuples.push_back(std::move(tuple));
+
+                 j++;
+            }
+
+            i++;
+
+            if (i >= _num_nodes)
+            {
+                break;
+            }
+        }
+
+        for (auto & future_tuple : future_tuples)
+        {
+            CanDriveTwitter *drive = std::get<0>(future_tuple);
+            std::future<bool> future = std::move(std::get<1>(future_tuple));
+
+            if (future.get())
+            {
+                std::cout << "Platform_Driver::initPltf: Drive " << drive->getDriveName() << " started" << std::endl;
+            }
+            else
+            {
+                std::cout << "Platform_Driver::initPltf: Startup of drive " << drive->getDriveName() << " failed" << std::endl;
+                return false;
+            }
+        }
 	}
+
+    //_can_drives[i]->commandVelocityRadSec(0.1);
+    //_can_drives[i]->commandPositionRad(0.0);
 
     std::cout << "Platform_Driver::initPltf: Platform init success" << std::endl;
     return true;
@@ -231,26 +267,26 @@ bool Platform_Driver::shutdownPltf()
 {
 	bool bRet = true;
 	//* shut down all motors
-	for(auto drive : m_vpMotor)
+	for(auto drive : _can_drives)
 	{
 		bRet &= drive->shutdown();
 	}
 	return bRet;
 }
 
-bool Platform_Driver::shutdownNode(int iCanIdent)
+bool Platform_Driver::shutdownNode(unsigned int drive_id)
 {
 	bool bRet = true;
 	//* shut down the motor
-	bRet &= m_vpMotor[iCanIdent]->shutdown();
+	bRet &= _can_drives[drive_id]->shutdown();
 	return bRet;
 }
 
-bool Platform_Driver::startNode(int iCanIdent)
+bool Platform_Driver::startNode(unsigned int drive_id)
 {
 	bool bRet = true;
 	//* start up the motor
-	bRet &= m_vpMotor[iCanIdent]->startup();
+	bRet &= _can_drives[drive_id]->startup();
 	return bRet;
 }
 
@@ -259,13 +295,13 @@ bool Platform_Driver::resetPltf()
 	bool bRetMotor = true;
 	bool bRet = true;
 
-	for(int i = 0; i < m_vpMotor.size(); i++)
+	for(auto drive : _can_drives)
 	{
-		bRetMotor = m_vpMotor[i]->reset();
+		bRetMotor = drive->reset();
 
 		if (!bRetMotor)
 		{
-			std::cout << "Resetting of Motor " << m_vCanNodeIDs.Name[i] << " failed" << std::endl;
+			std::cout << "Resetting of Motor " << drive->getDriveName() << " failed" << std::endl;
 		}
 
         bRet &= bRetMotor;
@@ -274,57 +310,57 @@ bool Platform_Driver::resetPltf()
 	return bRet;
 }
 
-bool Platform_Driver::resetNode(int iCanIdent)
+bool Platform_Driver::resetNode(unsigned int drive_id)
 {
-	bool bRet = true;
-	bRet = m_vpMotor[iCanIdent]->reset();
+    auto drive = _can_drives[drive_id];
+    bool bRet = drive->reset();
 
     if (!bRet)
     {
-        std::cout << "Resetting of Motor " << m_vCanNodeIDs.Name[iCanIdent] << " failed" << std::endl;
+        std::cout << "Resetting of Motor " << drive->getDriveName() << " failed" << std::endl;
     }
 
 	return bRet;
 }
 
-void Platform_Driver::nodePositionCommandRad(int iCanIdent, double dPosGearRad)
+void Platform_Driver::nodePositionCommandRad(unsigned int drive_id, double dPosGearRad)
 {		
-	m_vpMotor[iCanIdent]->commandPositionRad(dPosGearRad);
+	_can_drives[drive_id]->commandPositionRad(dPosGearRad);
 }
 
-void Platform_Driver::nodeVelocityCommandRadS(int iCanIdent, double dVelGearRadS)
+void Platform_Driver::nodeVelocityCommandRadS(unsigned int drive_id, double dVelGearRadS)
 {
-	m_vpMotor[iCanIdent]->commandVelocityRadSec(dVelGearRadS);
+	_can_drives[drive_id]->commandVelocityRadSec(dVelGearRadS);
 }
 
-void Platform_Driver::nodeTorqueCommandNm(int iCanIdent, double dTorqueNm)
+void Platform_Driver::nodeTorqueCommandNm(unsigned int drive_id, double dTorqueNm)
 {
-	m_vpMotor[iCanIdent]->commandTorqueNm(dTorqueNm);
+	_can_drives[drive_id]->commandTorqueNm(dTorqueNm);
 }
 
-void Platform_Driver::getNodePositionRad(int iCanIdent, double* pdAngleGearRad)
+void Platform_Driver::getNodePositionRad(unsigned int drive_id, double* pdAngleGearRad)
 {
-	*pdAngleGearRad = m_vpMotor[iCanIdent]->readPositionRad();
+	*pdAngleGearRad = _can_drives[drive_id]->readPositionRad();
 }
 
-void Platform_Driver::getNodeVelocityRadS(int iCanIdent, double* pdVelocityRadS)
+void Platform_Driver::getNodeVelocityRadS(unsigned int drive_id, double* pdVelocityRadS)
 {
-	*pdVelocityRadS = m_vpMotor[iCanIdent]->readVelocityRadSec();
+	*pdVelocityRadS = _can_drives[drive_id]->readVelocityRadSec();
 }
 
-void Platform_Driver::getNodeTorque(int iCanIdent, double* pdTorqueNm)
+void Platform_Driver::getNodeTorque(unsigned int drive_id, double* pdTorqueNm)
 {
-	*pdTorqueNm = m_vpMotor[iCanIdent]->readTorqueNm();
+	*pdTorqueNm = _can_drives[drive_id]->readTorqueNm();
 }
 
-bool Platform_Driver::getNodeData(int iCanIdent,double* pdAngleGearRad, double* pdVelGearRadS, double* pdCurrentAmp, double* pdTorqueNm)
+bool Platform_Driver::getNodeData(unsigned int drive_id, double* pdAngleGearRad, double* pdVelGearRadS, double* pdCurrentAmp, double* pdTorqueNm)
 {
-	if (!m_vpMotor[iCanIdent]->isError())
+	if (!_can_drives[drive_id]->isError())
 	{
-	    *pdAngleGearRad = m_vpMotor[iCanIdent]->readPositionRad();
-	    *pdVelGearRadS = m_vpMotor[iCanIdent]->readVelocityRadSec();
+	    *pdAngleGearRad = _can_drives[drive_id]->readPositionRad();
+	    *pdVelGearRadS = _can_drives[drive_id]->readVelocityRadSec();
         // TODO: add current output
-	    *pdTorqueNm = m_vpMotor[iCanIdent]->readTorqueNm();
+	    *pdTorqueNm = _can_drives[drive_id]->readTorqueNm();
 
 		return true;
 	}
@@ -332,7 +368,7 @@ bool Platform_Driver::getNodeData(int iCanIdent,double* pdAngleGearRad, double* 
 	return false;
 }
 
-void Platform_Driver::getNodeAnalogInput(int iCanIdent,double* pdAnalogInput)
+void Platform_Driver::getNodeAnalogInput(unsigned int drive_id, double* pdAnalogInput)
 {
-	*pdAnalogInput = m_vpMotor[iCanIdent]->readAnalogInput();
+	*pdAnalogInput = _can_drives[drive_id]->readAnalogInput();
 }

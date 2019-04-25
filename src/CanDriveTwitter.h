@@ -110,6 +110,8 @@ public:
 
     unsigned int getCanId();
 
+    std::string getDriveName();
+
 	/**
 	 * Sets the drive parameters.
 	 * @param driveParam is the object of the DriveParam class that contains the values of the drive parameters.

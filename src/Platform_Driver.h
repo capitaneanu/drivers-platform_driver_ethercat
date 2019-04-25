@@ -68,7 +68,7 @@ public:
 	/** 
 	 * Default constructor.
 	 */
-	Platform_Driver(int num_motors, int num_nodes, int can_dev_type, std::string can_dev_addr, int watchdog);
+	Platform_Driver(unsigned int num_motors, unsigned int num_nodes, unsigned int can_dev_type, std::string can_dev_addr, unsigned int watchdog);
 
 	/**
 	 * Default destructor.
@@ -107,14 +107,14 @@ public:
 	 * Disables motor, enables brake and disconnects.
 	 * @return True if the drive is properly shut down.
 	 */
-	bool shutdownNode(int iCanIdent);
+	bool shutdownNode(unsigned int drive_id);
 	
     /**
 	 * Starts the specific Node.
 	 * Enables the motor, check the status.
 	 * @return True if the drive is properly started.
 	 */
-	bool startNode(int iCanIdent);
+	bool startNode(unsigned int drive_id);
 
 
 	/**
@@ -129,82 +129,81 @@ public:
 	 * The function might be necessary after an emergency stop or an hardware failure to re-init drives.
 	 * @return True if re-initialization is successful, false otherwise.
 	 */
-	bool resetNode(int iCanIdent);
+	bool resetNode(unsigned int drive_id);
 
 	/**
 	 * Sends position (and velocity) command for specific can node (PTP Motion).
 	 * Node must be in position control mode
-	 * @param iCanIdent selects the can node
+	 * @param drive_id selects the can node
 	 * @param dPosGearRad position command in radians
 	 * @param dVelGearRadS velocity command in radian per second
 	 */	
-	void nodePositionCommandRad(int iCanIdent, double dPosRad);
+	void nodePositionCommandRad(unsigned int drive_id, double dPosRad);
 
 	/**
 	 * Sends velocity command for specific can node.
 	 * Node must be in velocity control mode
-	 * @param iCanIdent selects the can node
+	 * @param drive_id selects the can node
 	 * @param dVelGearRadS velocity command in radian per second
 	 */	
-	void nodeVelocityCommandRadS(int iCanIdent, double dVelRadS);
+	void nodeVelocityCommandRadS(unsigned int drive_id, double dVelRadS);
 
 	/**
 	 * Sends torque command for specific can node.
-	 * @param iCanIdent selects the can node
+	 * @param drive_id selects the can node
 	 * @param dTorqueNM motor-torque in Nm
 	 */	
-	void nodeTorqueCommandNm(int iCanIdent, double dTorqueNm);
+	void nodeTorqueCommandNm(unsigned int drive_id, double dTorqueNm);
 
 	/**
 	 * Requests the status of a given can node.
 	 */
-	void requestNodeStatus(int iCanIdent);
+	void requestNodeStatus(unsigned int drive_id);
 
 	/**
 	 * Requests position and velocity of a given can node.
-	 * @param iCanIdent selects the can node
+	 * @param drive_id selects the can node
 	 */
-	void requestNodePosVel(int iCanIdent);
+	void requestNodePosVel(unsigned int drive_id);
 
 	/**
 	 * Requests motor-torque (active current) of a given node.
-	 * @param iCanIdent selects the can node
+	 * @param drive_id selects the can node
 	 */
-	void requestNodeTorque(int iCanIdent);
+	void requestNodeTorque(unsigned int drive_id);
 
 	/**
 	 * Gets the position and velocity of a given node.
-	 * @param iCanIdent selects the can node
+	 * @param drive_id selects the can node
 	 * @param pdAngleGearRad The value (in radians) of the current position of the motor is stored in this pointer.
 	 */
-	void getNodePositionRad(int iCanIdent, double* pdPositionRad);
+	void getNodePositionRad(unsigned int drive_id, double* pdPositionRad);
 
 	/**
 	 * Gets the velocity of a given node.
-	 * @param iCanIdent selects the can node
+	 * @param drive_id selects the can node
 	 * @param pdVelGearRadS The value (in radians/s) of the current velocity of the motor is stored in this pointer.
 	 */
-	void getNodeVelocityRadS(int iCanIdent, double* pdVelocityRadS);
+	void getNodeVelocityRadS(unsigned int drive_id, double* pdVelocityRadS);
 
 	/**
 	 * Gets the motor torque (from active current) of a given node.
-	 * @param iCanIdent selects the can node
+	 * @param drive_id selects the can node
 	 * @param pdTorqueNm The value (in Nm) of the current motor torque is stored in this pointer.
 	 */
-	void getNodeTorque(int iCanIdent, double* pdTorqueNm);
+	void getNodeTorque(unsigned int drive_id, double* pdTorqueNm);
 
 
-	bool getNodeData(int iCanIdent,double* pdAngleGearRad, double* pdVelGearRadS, double* pdCurrentAmp, double* pdTorqueNm);
+	bool getNodeData(unsigned int drive_id, double* pdAngleGearRad, double* pdVelGearRadS, double* pdCurrentAmp, double* pdTorqueNm);
 
-	void getNodeAnalogInput(int iCanIdent,double* pdAnalogInput);
+	void getNodeAnalogInput(unsigned int drive_id, double* pdAnalogInput);
 
 private:
-    CanOverEthercat* m_pCanCtrl;											/**< CAN interface device class object (PeakSysUSB) */
-    std::vector<CanDriveTwitter*> m_vpMotor;						/**< Motor controllers. Pointer to each motor's CanDrive-Itf */
-    PltfCanParams m_vCanNodeIDs;								/**< Array of CanNodeTypes. Keeps information of all Node IDs and high level description */
-
-    int _num_nodes;
-	std::string _can_address;								/**< Address of the can device interface in the system */
+	std::string _can_address;						/**< Address of the can device interface in the system */
+    CanOverEthercat* _can_interface;				/**< CAN interface device class object (PeakSysUSB) */
+    std::vector<CanDriveTwitter *> _can_drives;		/**< Motor controllers. Pointer to each motor's CanDrive-Itf */
+    PltfCanParams _can_parameters;	    	/**< Array of CanNodeTypes. Keeps information of all Node IDs and high level description */
+    unsigned int _num_nodes;
 };
 
 

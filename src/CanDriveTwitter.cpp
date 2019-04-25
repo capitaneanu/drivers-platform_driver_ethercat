@@ -123,7 +123,6 @@ bool CanDriveTwitter::startup()
         }
     }
 
-	std::cout << "CanDriveTwitter::startup: Drive " << _drive_name << " started up." << std::endl;
 	return true;
 }
 
@@ -371,6 +370,11 @@ bool CanDriveTwitter::requestEmergencyStop()
 unsigned int CanDriveTwitter::getCanId()
 {
     return _can_id;
+}
+
+std::string CanDriveTwitter::getDriveName()
+{
+    return _drive_name;
 }
 
 void CanDriveTwitter::setDriveParam(DriveParam drive_param)
