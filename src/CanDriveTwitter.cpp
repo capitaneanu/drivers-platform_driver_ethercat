@@ -59,11 +59,25 @@ bool CanDriveTwitter::configure()
     _can_interface->sdoWrite(_can_id, 0x607d, 1, 4, _drive_param.getPosMin());  // min position limit
     _can_interface->sdoWrite(_can_id, 0x607d, 2, 4, _drive_param.getPosMax());  // max position limit
     _can_interface->sdoWrite(_can_id, 0x607f, 0, 4, _drive_param.getVelMax());  // max profile velocity
+    _can_interface->sdoWrite(_can_id, 0x60c5, 0, 4, _drive_param.getMaxAcc());  // max acceleration
+    _can_interface->sdoWrite(_can_id, 0x60c6, 0, 4, _drive_param.getMaxDec());  // max deceleration
 
     // set profile motion parameters
     _can_interface->sdoWrite(_can_id, 0x6081, 0, 4, _drive_param.getPtpVelDefault());  // profile velocity
     _can_interface->sdoWrite(_can_id, 0x6083, 0, 4, _drive_param.getMaxAcc());  // profile acceleration
-    _can_interface->sdoWrite(_can_id, 0x6084, 0, 4, _drive_param.getMaxDec());  // profile decelaration
+    _can_interface->sdoWrite(_can_id, 0x6084, 0, 4, _drive_param.getMaxDec());  // profile deceleration
+
+    // factors (set to 1 to convert units on software side instead of Elmo conversion)
+    _can_interface->sdoWrite(_can_id, 0x6090, 1, 4, 0x00000001);  // velocity encoder resolution (encoder increments)
+    _can_interface->sdoWrite(_can_id, 0x6090, 2, 4, 0x00000001);  // velocity encoder resolution (motor revolutions)
+    _can_interface->sdoWrite(_can_id, 0x6091, 1, 4, 0x00000001);  // gear ratio (motor shaft revolutions)
+    _can_interface->sdoWrite(_can_id, 0x6091, 2, 4, 0x00000001);  // gear ratio (driving shaft revolutions)
+    _can_interface->sdoWrite(_can_id, 0x6092, 1, 4, 0x00000001);  // feed constant (feed)
+    _can_interface->sdoWrite(_can_id, 0x6092, 2, 4, 0x00000001);  // feed constant (driving shaft revolutions)
+    _can_interface->sdoWrite(_can_id, 0x6096, 1, 4, 0x00000001);  // velocity factor (numerator)
+    _can_interface->sdoWrite(_can_id, 0x6096, 2, 4, 0x00000001);  // velocity factor (divisor)
+    _can_interface->sdoWrite(_can_id, 0x6097, 1, 4, 0x00000001);  // acceleration factor (numerator)
+    _can_interface->sdoWrite(_can_id, 0x6097, 2, 4, 0x00000001);  // acceleration factor (divisor)
 
     // TODO: check wkc
     return true;
@@ -231,7 +245,7 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
 
     _output->control_word &= 0xffef; // no new set point
 
-    std::cout << "CanDriveTwitter::commandPositionRad: Drive: " << _drive_name << " Current position: " << _input->actual_position << " Target position: " << _output->target_position << std::endl;
+    //std::cout << "CanDriveTwitter::commandPositionRad: Drive: " << _drive_name << " Current position: " << _input->actual_position << " Target position: " << _output->target_position << std::endl;
 }
 
 void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
