@@ -1,8 +1,9 @@
 #ifndef CANOVERETHERCAT_INCLUDEDEF_H
 #define CANOVERETHERCAT_INCLUDEDEF_H
 
+#include <map>
 #include <string>
-#include <vector>
+#include <thread>
 
 class CanDriveTwitter;
 
@@ -24,13 +25,13 @@ private:
     char _io_map[4096];
     std::string _device_name;
     bool _is_initialized;
-    std::vector<CanDriveTwitter *> _drives_twitter;
-    pthread_t _thread_handle;
+    std::map<unsigned int, CanDriveTwitter *> _drives_twitter;
+    std::thread _ethercat_thread;
 
     static int _expected_wkc;
     static volatile int _wkc;
 
-    static void *pdoCycle(void *ptr);
+    void pdoCycle();
 };
 
 #endif

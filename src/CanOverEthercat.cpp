@@ -40,29 +40,29 @@ bool CanOverEthercat::init()
            }
 
            /* configure all drives via sdo */
-           for (CanDriveTwitter *drive : _drives_twitter)
+           for (auto drive : _drives_twitter)
            {
-               unsigned int can_id = drive->getCanId();
+               unsigned int can_id = drive.first;
 
-               if (can_id <= 0 || can_id > ec_slavecount)
+               if (can_id > ec_slavecount)
                {
                    printf("Slave id %d outside range.\n", can_id);
                    return false;
                }
 
-               drive->configure();
+               drive.second->configure();
            }
 
            ec_config_map(&_io_map);
            ec_configdc();
 
            /* set pointers to pdo map for all drives */
-           for (CanDriveTwitter *drive : _drives_twitter)
+           for (auto drive : _drives_twitter)
            {
-               unsigned int can_id = drive->getCanId();
+               unsigned int can_id = drive.first;
 
-               drive->setInputPdo(ec_slave[can_id].inputs);
-               drive->setOutputPdo(ec_slave[can_id].outputs);
+               drive.second->setInputPdo(ec_slave[can_id].inputs);
+               drive.second->setOutputPdo(ec_slave[can_id].outputs);
            }
 
            printf("Slaves mapped, state to SAFE_OP.\n");
@@ -94,7 +94,8 @@ bool CanOverEthercat::init()
                printf("Operational state reached for all slaves.\n");
 
                /* create thread for pdo cycle */
-               pthread_create(&_thread_handle, NULL, &pdoCycle, NULL);
+               //pthread_create(&_thread_handle, NULL, &pdoCycle, NULL);
+               _ethercat_thread = std::thread(&CanOverEthercat::pdoCycle, this);
 
                _is_initialized = true;
                return true;
@@ -148,8 +149,8 @@ void CanOverEthercat::close()
         ec_writestate(0);
 
         // cancel pdo_cycle thread
-        pthread_cancel(_thread_handle);
-        pthread_join(_thread_handle, NULL);
+        //pthread_cancel(_thread_handle);
+        //pthread_join(_thread_handle, NULL);
 
         _is_initialized = false;
     }
@@ -171,7 +172,7 @@ bool CanOverEthercat::addDrive(CanDriveTwitter *drive)
         return false;
     }
 
-    _drives_twitter.push_back(drive);
+    _drives_twitter.insert(std::make_pair(drive->getCanId(), drive));
 
     return true;
 }
@@ -206,7 +207,7 @@ unsigned char *CanOverEthercat::getOutputPdoPtr(uint16_t slave)
     return ec_slave[slave].outputs;
 }
 
-void *CanOverEthercat::pdoCycle(void *ptr)
+void CanOverEthercat::pdoCycle()
 {
     int currentgroup = 0;
 
@@ -242,6 +243,8 @@ void *CanOverEthercat::pdoCycle(void *ptr)
                   }
                   else if(ec_slave[slave].state > EC_STATE_NONE)
                   {
+                     //_drives_twitter[slave]->configure();
+
                      if (ec_reconfig_slave(slave, EC_TIMEOUTMON))
                      {
                         ec_slave[slave].islost = FALSE;
