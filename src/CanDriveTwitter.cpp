@@ -3,6 +3,7 @@
 
 #include "CanDriveTwitter.h"
 #include "CanOverEthercat.h"
+#include "base-logging/Logging.hpp"
 
 CanDriveTwitter::CanDriveTwitter(CanOverEthercat *can_interface, unsigned int can_id, std::string drive_name)
 : _can_interface(can_interface), _can_id(can_id), _drive_name(drive_name), _input(NULL), _output(NULL)
@@ -68,6 +69,8 @@ bool CanDriveTwitter::configure()
     _can_interface->sdoWrite(_can_id, 0x6084, 0, 4, _drive_param.getMaxDec());  // profile deceleration
 
     // factors (set to 1 to convert units on software side instead of Elmo conversion)
+    _can_interface->sdoWrite(_can_id, 0x608f, 1, 4, 0x00000001);  // position encoder resolution (encoder increments)
+    _can_interface->sdoWrite(_can_id, 0x608f, 2, 4, 0x00000001);  // position encoder resolution (encoder increments)
     _can_interface->sdoWrite(_can_id, 0x6090, 1, 4, 0x00000001);  // velocity encoder resolution (encoder increments)
     _can_interface->sdoWrite(_can_id, 0x6090, 2, 4, 0x00000001);  // velocity encoder resolution (motor revolutions)
     _can_interface->sdoWrite(_can_id, 0x6091, 1, 4, 0x00000001);  // gear ratio (motor shaft revolutions)
@@ -78,6 +81,8 @@ bool CanDriveTwitter::configure()
     _can_interface->sdoWrite(_can_id, 0x6096, 2, 4, 0x00000001);  // velocity factor (divisor)
     _can_interface->sdoWrite(_can_id, 0x6097, 1, 4, 0x00000001);  // acceleration factor (numerator)
     _can_interface->sdoWrite(_can_id, 0x6097, 2, 4, 0x00000001);  // acceleration factor (divisor)
+
+    LOG_INFO_S << "Drive " << _drive_name << " configured";
 
     // TODO: check wkc
     return true;
@@ -224,10 +229,19 @@ bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
 
 void CanDriveTwitter::commandPositionRad(double position_rad)
 {
+    int max_pos = _drive_param.getPosMax();
+    int min_pos = _drive_param.getPosMin();
+    int target_pos = _drive_param.getSign() * _drive_param.PosGearRadToPosMotIncr(position_rad);
+    int target_pos_limited = std::min(max_pos, std::max(min_pos, target_pos));
+
+    if (target_pos != target_pos_limited)
+    {
+        LOG_WARN_S << "Command exceeds position limit for drive " << _drive_name;
+    }
+
+    _output->target_position = target_pos_limited;
     commandOperationMode(OM_PROFILE_POSITION);
     //commandOperationMode(OM_CYCSYNC_POSITION);
-
-    _output->target_position = _drive_param.getSign() * _drive_param.PosGearRadToPosMotIncr(position_rad);
     _output->control_word |= 0x0030; // new set point & change set point immediately
 
     int cnt = 1000;
@@ -250,8 +264,32 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
 
 void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
 {
+    int max_vel = _drive_param.getVelMax();
+    int target_vel = _drive_param.getSign() * _drive_param.VelGearRadSToVelMotIncrPeriod(velocity_rad_sec);
+    int target_vel_limited = std::min(max_vel, std::max(-max_vel, target_vel));
+
+    if (target_vel != target_vel_limited)
+    {
+        LOG_WARN_S << "Command exceeds velocity limit for drive " << _drive_name;
+    }
+
+    int current_pos = _input->actual_position;
+    int max_pos = _drive_param.getPosMax();
+    int min_pos = _drive_param.getPosMin();
+    int target_vel_poslimited = target_vel_limited;
+
+    if (current_pos >= max_pos)
+        target_vel_poslimited = std::min(0, target_vel_limited);
+    else if (current_pos <= min_pos)
+        target_vel_poslimited = std::max(0, target_vel_limited);
+
+    if (target_vel_limited != target_vel_poslimited)
+    {
+        LOG_WARN_S << "Position limit reached for drive " << _drive_name;
+    }
+
+    _output->target_velocity = target_vel_poslimited;
     commandOperationMode(OM_PROFILE_VELOCITY);
-    _output->target_velocity = _drive_param.getSign() * _drive_param.VelGearRadSToVelMotIncrPeriod(velocity_rad_sec);
 }
 
 void CanDriveTwitter::commandTorqueNm(double torque_nm)
@@ -280,6 +318,9 @@ bool CanDriveTwitter::checkSetPointAcknowledge()
 
 double CanDriveTwitter::readPositionRad()
 {
+    if (_drive_name == "MAST_PAN")
+        LOG_DEBUG_S << "Current pos of MAST_PAN: " << _input->actual_position;
+
     return _drive_param.getSign() * _drive_param.PosMotIncrToPosGearRad(_input->actual_position);
 }
 
