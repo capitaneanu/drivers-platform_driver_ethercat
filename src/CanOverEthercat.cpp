@@ -183,18 +183,20 @@ bool CanOverEthercat::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int *da
 
     int wkc = ec_SDOread(slave, idx, sub, FALSE, &fieldsize, &data, EC_TIMEOUTRXM);
 
-    //TODO: check wkc
-
-    return true;
+    if (wkc == 1)
+        return true;
+    else
+        return false;
 }
 
 bool CanOverEthercat::sdoWrite(uint16_t slave, uint16_t idx, uint8_t sub, int fieldsize, int data)
 {
     int wkc = ec_SDOwrite(slave, idx, sub, FALSE, fieldsize, &data, EC_TIMEOUTRXM);
 
-    //TODO: check wkc
-
-    return true;
+    if (wkc == 1)
+        return true;
+    else
+        return false;
 }
 
 unsigned char *CanOverEthercat::getInputPdoPtr(uint16_t slave)

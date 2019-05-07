@@ -17,33 +17,46 @@ CanDriveTwitter::~CanDriveTwitter()
 
 bool CanDriveTwitter::configure()
 {
+    LOG_DEBUG_S << "Configuring drive " << _drive_name << " ...";
+
+    typedef struct SdoWrite
+    {
+        uint16_t index;
+        uint8_t subindex;
+        uint8_t fieldsize;
+        int32_t data;
+    } SdoWrite;
+
+    std::vector<SdoWrite> sdo_writes;
+
     // set RxPDO map
-    _can_interface->sdoWrite(_can_id, 0x1c12, 0, 1, 0x00);   // disable
-    _can_interface->sdoWrite(_can_id, 0x1c12, 1, 2, 0x160a); // control word
-    _can_interface->sdoWrite(_can_id, 0x1c12, 2, 2, 0x160b); // mode of operation
-    _can_interface->sdoWrite(_can_id, 0x1c12, 3, 2, 0x160f); // target position
-    _can_interface->sdoWrite(_can_id, 0x1c12, 4, 2, 0x161c); // target velocity
-    _can_interface->sdoWrite(_can_id, 0x1c12, 5, 2, 0x160c); // target torque
-    _can_interface->sdoWrite(_can_id, 0x1c12, 0, 1, 0x05);   // enable
+    sdo_writes.push_back(SdoWrite{0x1c12, 0, 1, 0x00});   // disable
+    sdo_writes.push_back(SdoWrite{0x1c12, 1, 2, 0x160a}); // control word
+    sdo_writes.push_back(SdoWrite{0x1c12, 2, 2, 0x160b}); // mode of operation
+    sdo_writes.push_back(SdoWrite{0x1c12, 3, 2, 0x160f}); // target position
+    sdo_writes.push_back(SdoWrite{0x1c12, 4, 2, 0x161c}); // target velocity
+    sdo_writes.push_back(SdoWrite{0x1c12, 5, 2, 0x160c}); // target torque
+    sdo_writes.push_back(SdoWrite{0x1c12, 0, 1, 0x05});   // enable
 
     // set TxPDO map
-    _can_interface->sdoWrite(_can_id, 0x1c13, 0, 1, 0x00);   // disable
-    _can_interface->sdoWrite(_can_id, 0x1c13, 1, 2, 0x1a0a); // status word
-    _can_interface->sdoWrite(_can_id, 0x1c13, 2, 2, 0x1a0b); // mode of operation display
-    _can_interface->sdoWrite(_can_id, 0x1c13, 3, 2, 0x1a0e); // actual position
-    _can_interface->sdoWrite(_can_id, 0x1c13, 4, 2, 0x1a11); // actual velocity
-    _can_interface->sdoWrite(_can_id, 0x1c13, 5, 2, 0x1a13); // actual torque
-    _can_interface->sdoWrite(_can_id, 0x1c13, 5, 2, 0x1a1d); // analog input
-    _can_interface->sdoWrite(_can_id, 0x1c13, 0, 1, 0x06);   // enable
+    sdo_writes.push_back(SdoWrite{0x1c13, 0, 1, 0x00});   // disable
+    sdo_writes.push_back(SdoWrite{0x1c13, 1, 2, 0x1a0a}); // status word
+    sdo_writes.push_back(SdoWrite{0x1c13, 2, 2, 0x1a0b}); // mode of operation display
+    sdo_writes.push_back(SdoWrite{0x1c13, 3, 2, 0x1a0e}); // actual position
+    sdo_writes.push_back(SdoWrite{0x1c13, 4, 2, 0x1a11}); // actual velocity
+    sdo_writes.push_back(SdoWrite{0x1c13, 5, 2, 0x1a13}); // actual torque
+    sdo_writes.push_back(SdoWrite{0x1c13, 5, 2, 0x1a1d}); // analog input
+    sdo_writes.push_back(SdoWrite{0x1c13, 0, 1, 0x06});   // enable
 
     // set commutation
-    _can_interface->sdoWrite(_can_id, 0x3034, 17, 4, 0x00000003); // commutation method
-    _can_interface->sdoWrite(_can_id, 0x31d6, 1, 4, 0x41f00000);  // stepper commutation desired current
+    sdo_writes.push_back(SdoWrite{0x3034, 17, 4, 0x00000003}); // commutation method
+    sdo_writes.push_back(SdoWrite{0x31d6, 1, 4, 0x41f00000});  // stepper commutation desired current
 
     // set limits
-    _can_interface->sdoWrite(_can_id, 0x6072, 0, 2, 0x0c76);      // max torque (from stall torque)
-    unsigned int rated_current = _drive_param.getNominalCurrent() * 1000.0;
-    unsigned int max_current;
+    sdo_writes.push_back(SdoWrite{0x6072, 0, 2, 0x0c76});      // max torque (from stall torque)
+
+    int rated_current = _drive_param.getNominalCurrent() * 1000.0;
+    int max_current;
 
     if (rated_current == 0)
     {
@@ -54,38 +67,51 @@ bool CanDriveTwitter::configure()
         max_current = (_drive_param.getCurrMax() * 1000.0 * 1000.0) / rated_current;
     }
 
-    _can_interface->sdoWrite(_can_id, 0x6073, 0, 2, max_current);    // max current (from stall current, in thousands of rated current)
-    _can_interface->sdoWrite(_can_id, 0x6075, 0, 4, rated_current);  // motor rated current (in mNm)
-    _can_interface->sdoWrite(_can_id, 0x6076, 0, 4, 0x0000000b);     // motor rated torque (11 mNm)
-    _can_interface->sdoWrite(_can_id, 0x607d, 1, 4, _drive_param.getPosMin());  // min position limit
-    _can_interface->sdoWrite(_can_id, 0x607d, 2, 4, _drive_param.getPosMax());  // max position limit
-    _can_interface->sdoWrite(_can_id, 0x607f, 0, 4, _drive_param.getVelMax());  // max profile velocity
-    _can_interface->sdoWrite(_can_id, 0x60c5, 0, 4, _drive_param.getMaxAcc());  // max acceleration
-    _can_interface->sdoWrite(_can_id, 0x60c6, 0, 4, _drive_param.getMaxDec());  // max deceleration
+    sdo_writes.push_back(SdoWrite{0x6073, 0, 2, max_current});    // max current (from stall current, in thousands of rated current)
+    sdo_writes.push_back(SdoWrite{0x6075, 0, 4, rated_current});  // motor rated current (in mNm)
+    sdo_writes.push_back(SdoWrite{0x6076, 0, 4, 0x0000000b});     // motor rated torque (11 mNm)
+    sdo_writes.push_back(SdoWrite{0x607d, 1, 4, (int)_drive_param.getPosMin()});  // min position limit
+    sdo_writes.push_back(SdoWrite{0x607d, 2, 4, (int)_drive_param.getPosMax()});  // max position limit
+    sdo_writes.push_back(SdoWrite{0x607f, 0, 4, (int)_drive_param.getVelMax()});  // max profile velocity
+    sdo_writes.push_back(SdoWrite{0x60c5, 0, 4, (int)_drive_param.getMaxAcc()});  // max acceleration
+    sdo_writes.push_back(SdoWrite{0x60c6, 0, 4, (int)_drive_param.getMaxDec()});  // max deceleration
 
     // set profile motion parameters
-    _can_interface->sdoWrite(_can_id, 0x6081, 0, 4, _drive_param.getPtpVelDefault());  // profile velocity
-    _can_interface->sdoWrite(_can_id, 0x6083, 0, 4, _drive_param.getMaxAcc());  // profile acceleration
-    _can_interface->sdoWrite(_can_id, 0x6084, 0, 4, _drive_param.getMaxDec());  // profile deceleration
+    sdo_writes.push_back(SdoWrite{0x6081, 0, 4, (int)_drive_param.getPtpVelDefault()});  // profile velocity
+    sdo_writes.push_back(SdoWrite{0x6083, 0, 4, (int)_drive_param.getMaxAcc()});  // profile acceleration
+    sdo_writes.push_back(SdoWrite{0x6084, 0, 4, (int)_drive_param.getMaxDec()});  // profile deceleration
 
     // factors (set to 1 to convert units on software side instead of Elmo conversion)
-    _can_interface->sdoWrite(_can_id, 0x608f, 1, 4, 0x00000001);  // position encoder resolution (encoder increments)
-    _can_interface->sdoWrite(_can_id, 0x608f, 2, 4, 0x00000001);  // position encoder resolution (encoder increments)
-    _can_interface->sdoWrite(_can_id, 0x6090, 1, 4, 0x00000001);  // velocity encoder resolution (encoder increments)
-    _can_interface->sdoWrite(_can_id, 0x6090, 2, 4, 0x00000001);  // velocity encoder resolution (motor revolutions)
-    _can_interface->sdoWrite(_can_id, 0x6091, 1, 4, 0x00000001);  // gear ratio (motor shaft revolutions)
-    _can_interface->sdoWrite(_can_id, 0x6091, 2, 4, 0x00000001);  // gear ratio (driving shaft revolutions)
-    _can_interface->sdoWrite(_can_id, 0x6092, 1, 4, 0x00000001);  // feed constant (feed)
-    _can_interface->sdoWrite(_can_id, 0x6092, 2, 4, 0x00000001);  // feed constant (driving shaft revolutions)
-    _can_interface->sdoWrite(_can_id, 0x6096, 1, 4, 0x00000001);  // velocity factor (numerator)
-    _can_interface->sdoWrite(_can_id, 0x6096, 2, 4, 0x00000001);  // velocity factor (divisor)
-    _can_interface->sdoWrite(_can_id, 0x6097, 1, 4, 0x00000001);  // acceleration factor (numerator)
-    _can_interface->sdoWrite(_can_id, 0x6097, 2, 4, 0x00000001);  // acceleration factor (divisor)
+    sdo_writes.push_back(SdoWrite{0x608f, 1, 4, 0x00000001});  // position encoder resolution (encoder increments)
+    sdo_writes.push_back(SdoWrite{0x608f, 2, 4, 0x00000001});  // position encoder resolution (encoder increments)
+    sdo_writes.push_back(SdoWrite{0x6090, 1, 4, 0x00000001});  // velocity encoder resolution (encoder increments)
+    sdo_writes.push_back(SdoWrite{0x6090, 2, 4, 0x00000001});  // velocity encoder resolution (motor revolutions)
+    sdo_writes.push_back(SdoWrite{0x6091, 1, 4, 0x00000001});  // gear ratio (motor shaft revolutions)
+    sdo_writes.push_back(SdoWrite{0x6091, 2, 4, 0x00000001});  // gear ratio (driving shaft revolutions)
+    sdo_writes.push_back(SdoWrite{0x6092, 1, 4, 0x00000001});  // feed constant (feed)
+    sdo_writes.push_back(SdoWrite{0x6092, 2, 4, 0x00000001});  // feed constant (driving shaft revolutions)
+    sdo_writes.push_back(SdoWrite{0x6096, 1, 4, 0x00000001});  // velocity factor (numerator)
+    sdo_writes.push_back(SdoWrite{0x6096, 2, 4, 0x00000001});  // velocity factor (divisor)
+    sdo_writes.push_back(SdoWrite{0x6097, 1, 4, 0x00000001});  // acceleration factor (numerator)
+    sdo_writes.push_back(SdoWrite{0x6097, 2, 4, 0x00000001});  // acceleration factor (divisor)
 
-    LOG_INFO_S << "Drive " << _drive_name << " configured";
+    bool success = true;
 
-    // TODO: check wkc
-    return true;
+    for (auto sdo_write : sdo_writes)
+    {
+        success &= _can_interface->sdoWrite(_can_id, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
+    }
+
+    if (success)
+    {
+        LOG_INFO_S << "Drive " << _drive_name << " configured";
+        return true;
+    }
+    else
+    {
+        LOG_ERROR_S << "Failed to configure drive " << _drive_name;
+        return false;
+    }
 }
 
 void CanDriveTwitter::setInputPdo(unsigned char *input_pdo)
