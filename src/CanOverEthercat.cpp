@@ -1,6 +1,6 @@
 #include "CanOverEthercat.h"
 #include "CanDriveTwitter.h"
-#include "soem/ethercat.h"
+#include "ethercat.h"
 
 #define EC_TIMEOUTMON 500
 
