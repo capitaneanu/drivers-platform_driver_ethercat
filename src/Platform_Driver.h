@@ -5,11 +5,9 @@
 #include <string>
 #include <vector>
 
-//* other motion library includes (try to remove) ----------------
-#include "Mutex.h"
-
-#include "CanDriveTwitter.h"
-#include "CanOverEthercat.h"
+class CanDeviceAtiFts;
+class CanDriveTwitter;
+class CanOverEthercat;
 
 enum MotorStatus {INACTIVE, ACTIVE};
 
@@ -23,7 +21,8 @@ enum MotorType
 	WHEEL_WALK,
 	MANIP_JOINT,
 	MAST_PAN,
-	MAST_TILT
+	MAST_TILT,
+    FT_SENSOR,
 };
 
 struct PltfCanParams
@@ -202,7 +201,9 @@ private:
 	std::string _can_address;						/**< Address of the can device interface in the system */
     CanOverEthercat* _can_interface;				/**< CAN interface device class object (PeakSysUSB) */
     std::vector<CanDriveTwitter *> _can_drives;		/**< Motor controllers. Pointer to each motor's CanDrive-Itf */
+    std::vector<CanDeviceAtiFts *> _can_fts;		/**< Motor controllers. Pointer to each motor's CanDrive-Itf */
     PltfCanParams _can_parameters;	    	/**< Array of CanNodeTypes. Keeps information of all Node IDs and high level description */
+    unsigned int _num_motors;
     unsigned int _num_nodes;
 };
 

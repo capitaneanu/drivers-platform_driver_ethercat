@@ -9,10 +9,14 @@
 #include <tuple>
 #include <vector>
 
+#include "CanDeviceAtiFts.h"
+#include "CanDriveTwitter.h"
+#include "CanOverEthercat.h"
 #include "Platform_Driver.h"
 
 Platform_Driver::Platform_Driver(unsigned int num_motors, unsigned int num_nodes, unsigned int can_dev_type, std::string can_dev_addr, unsigned int watchdog)
 {	
+    _num_motors = num_motors;
     _num_nodes = num_nodes;
 	_can_address = can_dev_addr;
     _can_interface = new CanOverEthercat(_can_address);
@@ -51,12 +55,12 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 
 	for (unsigned int i = 0; i < _num_nodes; i++)
 	{
-		//* add new Twitter
-        CanDriveTwitter *drive = new CanDriveTwitter(_can_interface, _can_parameters.CanId[i], _can_parameters.Name[i]);
-
 		//* set Motor parameters depending on the type of motor
 		if (_can_parameters.Type[i] == WHEEL_DRIVE)
 		{
+    		//* add new Twitter
+            CanDriveTwitter *drive = new CanDriveTwitter(_can_interface, _can_parameters.CanId[i], _can_parameters.Name[i]);
+
 			drive->getDriveParam()->setParam(
 					wheel_drive_params.iEncIncrPerRevMot,
 					wheel_drive_params.dBeltRatio,
@@ -74,9 +78,15 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					wheel_drive_params.iEncOffsetIncr,
 					wheel_drive_params.dAnalogFactor,
 					wheel_drive_params.dNominalCurrent);
+
+		    _can_drives.push_back(drive);
+            _can_interface->addDevice(drive);
 		}
 		else if (_can_parameters.Type[i] == WHEEL_STEER)
 		{
+    		//* add new Twitter
+            CanDriveTwitter *drive = new CanDriveTwitter(_can_interface, _can_parameters.CanId[i], _can_parameters.Name[i]);
+
 			drive->getDriveParam()->setParam(
 					steer_drive_params.iEncIncrPerRevMot,
 					steer_drive_params.dBeltRatio,
@@ -94,9 +104,15 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					steer_drive_params.iEncOffsetIncr,
 					steer_drive_params.dAnalogFactor,
 					steer_drive_params.dNominalCurrent);
+
+		    _can_drives.push_back(drive);
+            _can_interface->addDevice(drive);
 		}
 		else if (_can_parameters.Type[i] == WHEEL_WALK)
 		{
+    		//* add new Twitter
+            CanDriveTwitter *drive = new CanDriveTwitter(_can_interface, _can_parameters.CanId[i], _can_parameters.Name[i]);
+
 			drive->getDriveParam()->setParam(
 					walk_drive_params.iEncIncrPerRevMot,
 					walk_drive_params.dBeltRatio,
@@ -114,9 +130,15 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					walk_drive_params.iEncOffsetIncr,
 					walk_drive_params.dAnalogFactor,
 					walk_drive_params.dNominalCurrent);
+
+		    _can_drives.push_back(drive);
+            _can_interface->addDevice(drive);
 		}
 		else if (_can_parameters.Type[i] == MANIP_JOINT)
 		{
+    		//* add new Twitter
+            CanDriveTwitter *drive = new CanDriveTwitter(_can_interface, _can_parameters.CanId[i], _can_parameters.Name[i]);
+
 			drive->getDriveParam()->setParam(
 					arm_drive_params.iEncIncrPerRevMot,
 					arm_drive_params.dBeltRatio,
@@ -134,9 +156,15 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					arm_drive_params.iEncOffsetIncr,
 					arm_drive_params.dAnalogFactor,
 					arm_drive_params.dNominalCurrent);
+
+		    _can_drives.push_back(drive);
+            _can_interface->addDevice(drive);
 		}
 		else if (_can_parameters.Type[i] == MAST_PAN)
 		{
+    		//* add new Twitter
+            CanDriveTwitter *drive = new CanDriveTwitter(_can_interface, _can_parameters.CanId[i], _can_parameters.Name[i]);
+
 			drive->getDriveParam()->setParam(
 					pan_drive_params.iEncIncrPerRevMot,
 					pan_drive_params.dBeltRatio,
@@ -154,9 +182,15 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					pan_drive_params.iEncOffsetIncr,
 					pan_drive_params.dAnalogFactor,
 					pan_drive_params.dNominalCurrent);
+            
+		    _can_drives.push_back(drive);
+            _can_interface->addDevice(drive);
 		}
 		else if (_can_parameters.Type[i] == MAST_TILT)
 		{
+    		//* add new Twitter
+            CanDriveTwitter *drive = new CanDriveTwitter(_can_interface, _can_parameters.CanId[i], _can_parameters.Name[i]);
+
 			drive->getDriveParam()->setParam(
 					tilt_drive_params.iEncIncrPerRevMot,
 					tilt_drive_params.dBeltRatio,
@@ -174,15 +208,21 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
 					tilt_drive_params.iEncOffsetIncr,
 					tilt_drive_params.dAnalogFactor,
 					tilt_drive_params.dNominalCurrent);
+
+		    _can_drives.push_back(drive);
+            _can_interface->addDevice(drive);
 		}
+        else if (_can_parameters.Type[i] == FT_SENSOR)
+        {
+            CanDeviceAtiFts *device = new CanDeviceAtiFts(_can_interface, _can_parameters.CanId[i], _can_parameters.Name[i]);
+            _can_fts.push_back(device);
+            _can_interface->addDevice(device);
+        }
 		else
 		{
 			std::cout << "Platform_Driver::ReadConfiguration: Unknown type "<< _can_parameters.Type[i] <<" of motor "<< _can_parameters.Name[i] <<std::endl;
 			return false;
 		}
-
-		_can_drives.push_back(drive);
-        _can_interface->addDrive(drive);
 	}
 
     std::cout << "Platform_Driver::readConfiguration: Success" <<std::endl;
@@ -210,7 +250,7 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
 	//* Start all drives in groups of 6
     unsigned int i = 0;
 
-    while (i < _num_nodes)
+    while (i < _num_motors)
 	{
         std::vector<std::tuple<CanDriveTwitter *, std::future<bool>>> future_tuples;
 
@@ -221,7 +261,7 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
             if (can_params.Active[i])
             {
                  CanDriveTwitter* drive = _can_drives[i];
-                 std::cout << "Platform_Driver::initPltf: Starting drive " << drive->getDriveName() << std::endl;
+                 std::cout << "Platform_Driver::initPltf: Starting drive " << drive->getDeviceName() << std::endl;
 
                  auto future = std::async(std::launch::async, &CanDriveTwitter::startup, drive);
                  auto tuple = std::make_tuple(drive, std::move(future));
@@ -233,7 +273,7 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
 
             i++;
 
-            if (i >= _num_nodes)
+            if (i >= _num_motors)
             {
                 break;
             }
@@ -246,18 +286,15 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
 
             if (future.get())
             {
-                std::cout << "Platform_Driver::initPltf: Drive " << drive->getDriveName() << " started" << std::endl;
+                std::cout << "Platform_Driver::initPltf: Drive " << drive->getDeviceName() << " started" << std::endl;
             }
             else
             {
-                std::cout << "Platform_Driver::initPltf: Startup of drive " << drive->getDriveName() << " failed" << std::endl;
+                std::cout << "Platform_Driver::initPltf: Startup of drive " << drive->getDeviceName() << " failed" << std::endl;
                 return false;
             }
         }
 	}
-
-    //_can_drives[i]->commandVelocityRadSec(0.1);
-    //_can_drives[i]->commandPositionRad(0.0);
 
     std::cout << "Platform_Driver::initPltf: Platform init success" << std::endl;
     return true;
@@ -301,7 +338,7 @@ bool Platform_Driver::resetPltf()
 
 		if (!bRetMotor)
 		{
-			std::cout << "Resetting of Motor " << drive->getDriveName() << " failed" << std::endl;
+			std::cout << "Resetting of Motor " << drive->getDeviceName() << " failed" << std::endl;
 		}
 
         bRet &= bRetMotor;
@@ -317,7 +354,7 @@ bool Platform_Driver::resetNode(unsigned int drive_id)
 
     if (!bRet)
     {
-        std::cout << "Resetting of Motor " << drive->getDriveName() << " failed" << std::endl;
+        std::cout << "Resetting of Motor " << drive->getDeviceName() << " failed" << std::endl;
     }
 
 	return bRet;

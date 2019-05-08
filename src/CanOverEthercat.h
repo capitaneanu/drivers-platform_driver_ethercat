@@ -5,7 +5,7 @@
 #include <string>
 #include <thread>
 
-class CanDriveTwitter;
+class CanDevice;
 
 class CanOverEthercat
 {
@@ -15,7 +15,7 @@ public:
 	bool init();
 	void close();
 	bool isInit();
-    bool addDrive(CanDriveTwitter *drive);
+    bool addDevice(CanDevice *device);
     unsigned char *getInputPdoPtr(uint16_t slave);
     unsigned char *getOutputPdoPtr(uint16_t slave);
 
@@ -25,7 +25,7 @@ private:
     char _io_map[4096];
     std::string _device_name;
     bool _is_initialized;
-    std::map<unsigned int, CanDriveTwitter *> _drives_twitter;
+    std::map<unsigned int, CanDevice *> _devices;
     std::thread _ethercat_thread;
 
     static int _expected_wkc;

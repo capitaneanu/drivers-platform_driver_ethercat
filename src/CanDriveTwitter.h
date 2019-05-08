@@ -3,6 +3,7 @@
 
 //* include files ---------------------------------------------
 
+#include "CanDevice.h"
 #include "DriveParam.h"
 
 class CanOverEthercat;
@@ -10,13 +11,13 @@ class CanOverEthercat;
 /**
  * Interface description for a drive type of class.
  */
-class CanDriveTwitter
+class CanDriveTwitter : public CanDevice
 {
 public:
 	/**
 	 * The constructor
 	 */
-	CanDriveTwitter(CanOverEthercat *can_interface, unsigned int can_id, std::string drive_name);
+	CanDriveTwitter(CanOverEthercat *can_interface, unsigned int can_id, std::string device_name);
 
 	/**
 	 * The destructor
@@ -107,10 +108,6 @@ public:
 	 * @return true if the result of the process is successful
 	 */
 	bool requestEmergencyStop();
-
-    unsigned int getCanId();
-
-    std::string getDriveName();
 
 	/**
 	 * Sets the drive parameters.
@@ -274,9 +271,6 @@ private:
         int16_t analog_input;
     } TxPdo;
 
-    CanOverEthercat *_can_interface;
-    unsigned int _can_id;
-    std::string _drive_name;
     DriveParam _drive_param;
     TxPdo *_input;
     RxPdo *_output;

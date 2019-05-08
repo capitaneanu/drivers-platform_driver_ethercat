@@ -1,5 +1,5 @@
 #include "CanOverEthercat.h"
-#include "CanDriveTwitter.h"
+#include "CanDevice.h"
 #include "ethercat.h"
 
 #define EC_TIMEOUTMON 500
@@ -33,16 +33,16 @@ bool CanOverEthercat::init()
        {
            printf("%d slaves found.\n", ec_slavecount);
 
-           if (_drives_twitter.size() != ec_slavecount)
+           if (_devices.size() > ec_slavecount)
            {
-               printf("Number of drives (%d) does not equal number of slaves.\n", _drives_twitter.size());
+               printf("Number of added devices (%d) is greater than number of slaves found.\n", _devices.size());
                return false;
            }
 
-           /* configure all drives via sdo */
-           for (auto drive : _drives_twitter)
+           /* configure all devices via sdo */
+           for (auto device : _devices)
            {
-               unsigned int can_id = drive.first;
+               unsigned int can_id = device.first;
 
                if (can_id > ec_slavecount)
                {
@@ -50,19 +50,29 @@ bool CanOverEthercat::init()
                    return false;
                }
 
-               drive.second->configure();
+               device.second->configure();
            }
+
+           // Disables complete access for FT sensors.
+           // Quick fix for manufacturer bug according to
+           // https://github.com/OpenEtherCATsociety/SOEM/issues/251
+           ec_slave[22].CoEdetails &= ~ECT_COEDET_SDOCA;
+           ec_slave[23].CoEdetails &= ~ECT_COEDET_SDOCA;
+           ec_slave[25].CoEdetails &= ~ECT_COEDET_SDOCA;
+           ec_slave[26].CoEdetails &= ~ECT_COEDET_SDOCA;
+           ec_slave[28].CoEdetails &= ~ECT_COEDET_SDOCA;
+           ec_slave[29].CoEdetails &= ~ECT_COEDET_SDOCA;
 
            ec_config_map(&_io_map);
            ec_configdc();
 
-           /* set pointers to pdo map for all drives */
-           for (auto drive : _drives_twitter)
+           /* set pointers to pdo map for all devices */
+           for (auto device : _devices)
            {
-               unsigned int can_id = drive.first;
+               unsigned int can_id = device.first;
 
-               drive.second->setInputPdo(ec_slave[can_id].inputs);
-               drive.second->setOutputPdo(ec_slave[can_id].outputs);
+               device.second->setInputPdo(ec_slave[can_id].inputs);
+               device.second->setOutputPdo(ec_slave[can_id].outputs);
            }
 
            printf("Slaves mapped, state to SAFE_OP.\n");
@@ -164,7 +174,7 @@ bool CanOverEthercat::isInit()
     return _is_initialized;
 }
 
-bool CanOverEthercat::addDrive(CanDriveTwitter *drive)
+bool CanOverEthercat::addDevice(CanDevice *device)
 {
     if (isInit())
     {
@@ -172,7 +182,7 @@ bool CanOverEthercat::addDrive(CanDriveTwitter *drive)
         return false;
     }
 
-    _drives_twitter.insert(std::make_pair(drive->getCanId(), drive));
+    _devices.insert(std::make_pair(device->getCanId(), device));
 
     return true;
 }
@@ -181,7 +191,7 @@ bool CanOverEthercat::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int *da
 {
     int fieldsize = sizeof(data);
 
-    int wkc = ec_SDOread(slave, idx, sub, FALSE, &fieldsize, &data, EC_TIMEOUTRXM);
+    int wkc = ec_SDOread(slave, idx, sub, FALSE, &fieldsize, data, EC_TIMEOUTRXM);
 
     if (wkc == 1)
         return true;
@@ -245,7 +255,7 @@ void CanOverEthercat::pdoCycle()
                   }
                   else if(ec_slave[slave].state > EC_STATE_NONE)
                   {
-                     //_drives_twitter[slave]->configure();
+                     //_devices[slave]->configure();
 
                      if (ec_reconfig_slave(slave, EC_TIMEOUTMON))
                      {
