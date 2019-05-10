@@ -385,7 +385,7 @@ void Platform_Driver::getNodeVelocityRadS(unsigned int drive_id, double* pdVeloc
 	*pdVelocityRadS = _can_drives[drive_id]->readVelocityRadSec();
 }
 
-void Platform_Driver::getNodeTorque(unsigned int drive_id, double* pdTorqueNm)
+void Platform_Driver::getNodeTorqueNm(unsigned int drive_id, double* pdTorqueNm)
 {
 	*pdTorqueNm = _can_drives[drive_id]->readTorqueNm();
 }
@@ -408,4 +408,22 @@ bool Platform_Driver::getNodeData(unsigned int drive_id, double* pdAngleGearRad,
 void Platform_Driver::getNodeAnalogInput(unsigned int drive_id, double* pdAnalogInput)
 {
 	*pdAnalogInput = _can_drives[drive_id]->readAnalogInput();
+}
+
+void Platform_Driver::getNodeFtsForceN(unsigned int fts_id, double *fx, double *fy, double *fz)
+{
+    CanDeviceAtiFts::Force force = _can_fts[fts_id]->readForceN();
+
+    *fx = force.fx;
+    *fy = force.fy;
+    *fz = force.fz;
+}
+
+void Platform_Driver::getNodeFtsTorqueNm(unsigned int fts_id, double *tx, double *ty, double *tz)
+{
+    CanDeviceAtiFts::Torque torque = _can_fts[fts_id]->readTorqueNm();
+
+    *tx = torque.tx;
+    *ty = torque.ty;
+    *tz = torque.tz;
 }

@@ -155,23 +155,6 @@ public:
 	void nodeTorqueCommandNm(unsigned int drive_id, double dTorqueNm);
 
 	/**
-	 * Requests the status of a given can node.
-	 */
-	void requestNodeStatus(unsigned int drive_id);
-
-	/**
-	 * Requests position and velocity of a given can node.
-	 * @param drive_id selects the can node
-	 */
-	void requestNodePosVel(unsigned int drive_id);
-
-	/**
-	 * Requests motor-torque (active current) of a given node.
-	 * @param drive_id selects the can node
-	 */
-	void requestNodeTorque(unsigned int drive_id);
-
-	/**
 	 * Gets the position and velocity of a given node.
 	 * @param drive_id selects the can node
 	 * @param pdAngleGearRad The value (in radians) of the current position of the motor is stored in this pointer.
@@ -190,18 +173,21 @@ public:
 	 * @param drive_id selects the can node
 	 * @param pdTorqueNm The value (in Nm) of the current motor torque is stored in this pointer.
 	 */
-	void getNodeTorque(unsigned int drive_id, double* pdTorqueNm);
-
+	void getNodeTorqueNm(unsigned int drive_id, double* pdTorqueNm);
 
 	bool getNodeData(unsigned int drive_id, double* pdAngleGearRad, double* pdVelGearRadS, double* pdCurrentAmp, double* pdTorqueNm);
 
-	void getNodeAnalogInput(unsigned int drive_id, double* pdAnalogInput);
+    void getNodeAnalogInput(unsigned int drive_id, double* pdAnalogInput);
 
+	void getNodeFtsForceN(unsigned int fts_id, double *fx, double *fy, double *fz);
+
+	void getNodeFtsTorqueNm(unsigned int fts_id, double *tx, double *ty, double *tz);
 private:
 	std::string _can_address;						/**< Address of the can device interface in the system */
     CanOverEthercat* _can_interface;				/**< CAN interface device class object (PeakSysUSB) */
     std::vector<CanDriveTwitter *> _can_drives;		/**< Motor controllers. Pointer to each motor's CanDrive-Itf */
-    std::vector<CanDeviceAtiFts *> _can_fts;		/**< Motor controllers. Pointer to each motor's CanDrive-Itf */
+    std::vector<CanDeviceAtiFts *> _can_fts;
+
     PltfCanParams _can_parameters;	    	/**< Array of CanNodeTypes. Keeps information of all Node IDs and high level description */
     unsigned int _num_motors;
     unsigned int _num_nodes;
