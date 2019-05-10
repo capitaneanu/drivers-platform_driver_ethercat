@@ -2,6 +2,7 @@
 
 #include "CanDevice.h"
 #include "DriveParam.h"
+#include <Eigen/Dense>
 
 class CanOverEthercat;
 
@@ -11,20 +12,6 @@ class CanOverEthercat;
 class CanDeviceAtiFts : public CanDevice
 {
 public:
-    typedef struct Force
-    {
-        double fx;
-        double fy;
-        double fz;
-    } Force;
-
-    typedef struct Torque
-    {
-        double tx;
-        double ty;
-        double tz;
-    } Torque;
-
 	/**
 	 * The constructor
 	 */
@@ -59,8 +46,8 @@ public:
 	 */
 	bool reset();
 
-    Force readForceN();
-    Torque readTorqueNm();
+    Eigen::Vector3d readForceN();
+    Eigen::Vector3d readTorqueNm();
 
 	/**
 	 * Returns true if an error has been detected.
@@ -110,4 +97,7 @@ private:
 
     int _counts_per_force;
     int _counts_per_torque;
+
+    Eigen::Vector3d _force_bias;
+    Eigen::Vector3d _torque_bias;
 };

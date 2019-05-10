@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <tuple>
 #include <vector>
+#include <Eigen/Dense>
 
 #include "CanDeviceAtiFts.h"
 #include "CanDriveTwitter.h"
@@ -412,18 +413,18 @@ void Platform_Driver::getNodeAnalogInput(unsigned int drive_id, double* pdAnalog
 
 void Platform_Driver::getNodeFtsForceN(unsigned int fts_id, double *fx, double *fy, double *fz)
 {
-    CanDeviceAtiFts::Force force = _can_fts[fts_id]->readForceN();
+    Eigen::Vector3d force = _can_fts[fts_id]->readForceN();
 
-    *fx = force.fx;
-    *fy = force.fy;
-    *fz = force.fz;
+    *fx = force[0];
+    *fy = force[1];
+    *fz = force[2];
 }
 
 void Platform_Driver::getNodeFtsTorqueNm(unsigned int fts_id, double *tx, double *ty, double *tz)
 {
-    CanDeviceAtiFts::Torque torque = _can_fts[fts_id]->readTorqueNm();
+    Eigen::Vector3d torque = _can_fts[fts_id]->readTorqueNm();
 
-    *tx = torque.tx;
-    *ty = torque.ty;
-    *tz = torque.tz;
+    *tx = torque[0];
+    *ty = torque[1];
+    *tz = torque[2];
 }

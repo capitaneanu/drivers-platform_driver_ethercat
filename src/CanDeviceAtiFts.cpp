@@ -5,9 +5,39 @@
 #include "base-logging/Logging.hpp"
 
 CanDeviceAtiFts::CanDeviceAtiFts(CanOverEthercat *can_interface, unsigned int can_id, std::string device_name)
-: CanDevice(can_interface, can_id, device_name), _input(NULL), _output(NULL), _counts_per_force(1), _counts_per_torque(1)
+: CanDevice(can_interface, can_id, device_name), _input(NULL), _output(NULL), _counts_per_force(1), _counts_per_torque(1), _force_bias(0, 0, 0), _torque_bias(0, 0, 0)
 
 {
+    if (device_name == "FTS_FL")
+    {
+        _force_bias = Eigen::Vector3d(0, 0, 0);
+        _torque_bias = Eigen::Vector3d(0, 0, 0);
+    }
+    else if (device_name == "FTS_FR")
+    {
+        _force_bias = Eigen::Vector3d(0, 0, 0);
+        _torque_bias = Eigen::Vector3d(0, 0, 0);
+    }
+    else if (device_name == "FTS_CL")
+    {
+        _force_bias = Eigen::Vector3d(0, 0, 0);
+        _torque_bias = Eigen::Vector3d(0, 0, 0);
+    }
+    else if (device_name == "FTS_CR")
+    {
+        _force_bias = Eigen::Vector3d(0, 0, 0);
+        _torque_bias = Eigen::Vector3d(0, 0, 0);
+    }
+    else if (device_name == "FTS_BL")
+    {
+        _force_bias = Eigen::Vector3d(0, 0, 0);
+        _torque_bias = Eigen::Vector3d(0, 0, 0);
+    }
+    else if (device_name == "FTS_BR")
+    {
+        _force_bias = Eigen::Vector3d(0, 0, 0);
+        _torque_bias = Eigen::Vector3d(0, 0, 0);
+    }
 }
 
 CanDeviceAtiFts::~CanDeviceAtiFts()
@@ -89,24 +119,26 @@ bool CanDeviceAtiFts::reset()
 	return shutdown() && startup();
 }
 
-CanDeviceAtiFts::Force CanDeviceAtiFts::readForceN()
+Eigen::Vector3d CanDeviceAtiFts::readForceN()
 {
     double fx = _input->fx * 1.0 / _counts_per_force;
     double fy = _input->fy * 1.0 / _counts_per_force;
     double fz = _input->fz * 1.0 / _counts_per_force;
 
-    Force force = {fx, fy, fz};
+    Eigen::Vector3d force = Eigen::Vector3d(fx, fy, fz);
+    force -= _force_bias;
 
     return force;
 }
 
-CanDeviceAtiFts::Torque CanDeviceAtiFts::readTorqueNm()
+Eigen::Vector3d CanDeviceAtiFts::readTorqueNm()
 {
     double tx = _input->tx * 1.0 / _counts_per_torque;
     double ty = _input->ty * 1.0 / _counts_per_torque;
     double tz = _input->tz * 1.0 / _counts_per_torque;
 
-    Torque torque = {tx, ty, tz};
+    Eigen::Vector3d torque = Eigen::Vector3d(tx, ty, tz);
+    torque -= _torque_bias;
 
     return torque;
 }
