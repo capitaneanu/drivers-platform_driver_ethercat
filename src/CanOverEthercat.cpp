@@ -53,15 +53,13 @@ bool CanOverEthercat::init()
                device.second->configure();
            }
 
-           // Disables complete access for FT sensors.
-           // Quick fix for manufacturer bug according to
+           // Disable complete access
+           // Workaround for bug of FT sensors according to
            // https://github.com/OpenEtherCATsociety/SOEM/issues/251
-           ec_slave[22].CoEdetails &= ~ECT_COEDET_SDOCA;
-           ec_slave[23].CoEdetails &= ~ECT_COEDET_SDOCA;
-           ec_slave[25].CoEdetails &= ~ECT_COEDET_SDOCA;
-           ec_slave[26].CoEdetails &= ~ECT_COEDET_SDOCA;
-           ec_slave[28].CoEdetails &= ~ECT_COEDET_SDOCA;
-           ec_slave[29].CoEdetails &= ~ECT_COEDET_SDOCA;
+           for (int i = 1; i <= ec_slavecount; i++)
+           {
+               ec_slave[i].CoEdetails &= ~ECT_COEDET_SDOCA;
+           }
 
            ec_config_map(&_io_map);
            ec_configdc();
