@@ -28,7 +28,7 @@ bool CanDeviceAtiFts::configure()
 
     std::vector<SdoWrite> sdo_writes;
 
-    //sdo_writes.push_back(SdoWrite{0x1c12, 0, 1, 0x00});   // disable
+    //sdo_writes.push_back(SdoWrite{0x1c12, 0, 1, 0x00});
 
     bool success = true;
 
@@ -36,6 +36,15 @@ bool CanDeviceAtiFts::configure()
     {
         success &= _can_interface->sdoWrite(_can_id, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
     }
+
+    int force_unit;
+    int torque_unit;
+
+    success &= _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x29, &force_unit);
+    success &= _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x2a, &torque_unit);
+
+    LOG_DEBUG_S << "Force unit of sensor " << _device_name << " is " << force_unit;
+    LOG_DEBUG_S << "Torque unit of sensor " << _device_name << " is " << torque_unit;
 
     success &= _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x31, &_counts_per_force);
     success &= _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x32, &_counts_per_torque);
@@ -82,9 +91,9 @@ bool CanDeviceAtiFts::reset()
 
 CanDeviceAtiFts::Force CanDeviceAtiFts::readForceN()
 {
-    double fx = _input->fx / _counts_per_force;
-    double fy = _input->fy / _counts_per_force;
-    double fz = _input->fz / _counts_per_force;
+    double fx = _input->fx * 1.0 / _counts_per_force;
+    double fy = _input->fy * 1.0 / _counts_per_force;
+    double fz = _input->fz * 1.0 / _counts_per_force;
 
     Force force = {fx, fy, fz};
 
@@ -93,9 +102,9 @@ CanDeviceAtiFts::Force CanDeviceAtiFts::readForceN()
 
 CanDeviceAtiFts::Torque CanDeviceAtiFts::readTorqueNm()
 {
-    double tx = _input->tx / _counts_per_force;
-    double ty = _input->ty / _counts_per_force;
-    double tz = _input->tz / _counts_per_force;
+    double tx = _input->tx * 1.0 / _counts_per_torque;
+    double ty = _input->ty * 1.0 / _counts_per_torque;
+    double tz = _input->tz * 1.0 / _counts_per_torque;
 
     Torque torque = {tx, ty, tz};
 
