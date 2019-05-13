@@ -189,35 +189,35 @@ bool CanDriveWhistle::evalReceivedMsg(CanMsg& msg)
 			break;
 		case CAN_MSG_RxPDO1_0:
 			//* should never receive a message with this ID, this ID is for sending messages to the whistle
-			std::cout << "CanDriveWhistle::evalReceivedMsg : Received message with ID of RxPDO1 " << msg.getID() << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Received message with ID of RxPDO1 " << msg.getID();
 			break;
 		case CAN_MSG_TxPDO2_0:
 			evalMsgTxPDO2(msg);
 			break;
 		case CAN_MSG_RxPDO2_0:
 			//* should never receive a message with this ID, this ID is for sending messages to the whistle
-			std::cout << "CanDriveWhistle::evalReceivedMsg : Received message with ID of RxPDO2 " << msg.getID() << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Received message with ID of RxPDO2 " << msg.getID();
 			break;
 		case CAN_MSG_TxPDO3_0:
 			evalMsgTxPDO3(msg);
 			break;
 		case CAN_MSG_RxPDO3_0:
 			//* should never receive a message with this ID, this ID is for sending messages to the whistle
-			std::cout << "CanDriveWhistle::evalReceivedMsg : Received message with ID of RxPDO3 " << msg.getID() << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Received message with ID of RxPDO3 " << msg.getID();
 			break;
 		case CAN_MSG_TxPDO4_0:
 			//evalMsgTxPDO4(msg);
 			break;
 		case CAN_MSG_RxPDO4_0:
 			//* should never receive a message with this ID, this ID is for sending messages to the whistle
-			std::cout << "CanDriveWhistle::evalReceivedMsg : Received message with ID of RxPDO4 " << msg.getID() << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Received message with ID of RxPDO4 " << msg.getID();
 			break;
 		case CAN_MSG_TxSDO_0:
 			evalMsgTxSDO(msg);
 			break;
 		case CAN_MSG_RxSDO_0:
 			//* should never receive a message with this ID, this ID is for sending messages to the whistle
-			std::cout << "CanDriveWhistle::evalReceivedMsg : Received message with ID of RxSDO " << msg.getID() << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Received message with ID of RxSDO " << msg.getID();
 			break;
 	}
 	bRet=true;
@@ -233,7 +233,7 @@ int CanDriveWhistle::getMsgType(int iID)
 	int ID = iID & 0x007f;
 	if (ID != m_ParamCanOpen.iCanID)
 	{
-		std::cout << "CanDriveWhistle::getMsgType : Not matching ID on motor: " << m_sName << std::endl;
+		LOG_WARN_S << __PRETTY_FUNCTION__ << ": Not matching ID on motor: " << m_sName;
 		return -1;
 	}
 	else
@@ -264,7 +264,7 @@ int CanDriveWhistle::getMsgType(int iID)
 			return CAN_MSG_ErrorControl_0;
 		else
 		{
-			std::cout << "CanDriveWhistle::getMsgType : Unknown type of message" << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Unknown type of message";
 			return -1;
 		}
 }
@@ -296,7 +296,7 @@ void CanDriveWhistle::evalMsgEMCY(CanMsg msg)
 
 	if ((errorCode==0x8130)&&(errorRegister==0x11))
 	{
-		std::cout << "CanDriveWhistle::evalMsgEMCY: Heartbeat event emergency message received!" << std::endl;
+		LOG_INFO_S << __PRETTY_FUNCTION__ << ": Heartbeat event emergency message received!";
 		sendHeartbeat();
 	}
 
@@ -322,9 +322,9 @@ void CanDriveWhistle::evalMsgTxPDO1(CanMsg msg)
 		VelMotIncrPeriodToVelGearRadS(iVel);
 
 #ifdef DEBUG
-	std::cout << "Motor Readings 1: " << m_sName << std::endl;
-	std::cout << "Pos: " << m_dPosGearMeasRad << std::endl;
-	std::cout << "Vel: " << m_dVelGearMeasRadS << std::endl;
+	LOG_DEBUG_S << "Motor Readings 1: " << m_sName;
+	LOG_DEBUG_S << "Pos: " << m_dPosGearMeasRad;
+	LOG_DEBUG_S << "Vel: " << m_dVelGearMeasRadS;
 #endif
 
 }
@@ -345,10 +345,10 @@ void CanDriveWhistle::evalMsgTxPDO3(CanMsg msg)
 
 #ifdef DEBUG
 	if (m_sName[6]=='D'){
-	std::cout << "Motor Readings 3: " << m_sName << std::endl;
-	std::cout << "Torque: " << iTorque << std::endl;
-	std::cout << "Current: " << m_dMotorCurrAmps << std::endl;
-	std::cout << "Analog: " << m_dAnalogInputVolts << std::endl;
+	LOG_DEBUG_S << "Motor Readings 3: " << m_sName;
+	LOG_DEBUG_S << "Torque: " << iTorque;
+	LOG_DEBUG_S << "Current: " << m_dMotorCurrAmps;
+	LOG_DEBUG_S << "Analog: " << m_dAnalogInputVolts;
 	}
 #endif
 
@@ -363,7 +363,7 @@ void CanDriveWhistle::evalMsgTxPDO2(CanMsg msg)
 
 	if (isBitSet(msg.getAt(3),6))
 	{
-		std::cout << "CanDriveWhistle::evalReceivedMsg : Received error answer from binary interpreter in motor " << m_sName << " Command sent was: " << msg.getAt(0) << msg.getAt(1) << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Received error answer from binary interpreter in motor " << m_sName << " Command sent was: " << msg.getAt(0) << msg.getAt(1);
 		// error_handling();
 	}
 
@@ -391,7 +391,7 @@ void CanDriveWhistle::evalMsgTxPDO2(CanMsg msg)
 	else if( (msg.getAt(0) == 'U') && (msg.getAt(1) == 'M') ) //* user mode
 	{
 #ifdef DEBUG
-		std::cout << "CanDriveWhistle::evalReceivedMsg : Unit Mode set to: " << msg.getAt(4) << std::endl;
+		LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Unit Mode set to: " << msg.getAt(4);
 #endif
 	}
 
@@ -437,7 +437,7 @@ void CanDriveWhistle::evalMsgTxPDO2(CanMsg msg)
 			m_bTargetReached=false;
 		}
 #ifdef DEBUG
-		std::cout << "motion status value received: " << iParam << std::endl;
+		LOG_DEBUG_S << "motion status value received: " << iParam;
 #endif
 		m_bMotionStatusReceived=true;
 	}
@@ -447,7 +447,7 @@ void CanDriveWhistle::evalMsgTxPDO2(CanMsg msg)
 		iParam = (msg.getAt(7) << 24) | (msg.getAt(6) << 16)
 			| (msg.getAt(5) << 8) | (msg.getAt(4) );
 #ifdef DEBUG
-		std::cout << "pm " << iParam << std::endl;
+		LOG_DEBUG_S << "pm " << iParam;
 #endif
 	}
 
@@ -456,7 +456,7 @@ void CanDriveWhistle::evalMsgTxPDO2(CanMsg msg)
 		iParam = (msg.getAt(7) << 24) | (msg.getAt(6) << 16)
 			| (msg.getAt(5) << 8) | (msg.getAt(4) );
 #ifdef DEBUG
-		std::cout << "ac " << iParam << std::endl;
+		LOG_DEBUG_S << "ac " << iParam;
 #endif
 	}
 
@@ -465,7 +465,7 @@ void CanDriveWhistle::evalMsgTxPDO2(CanMsg msg)
 		iParam = (msg.getAt(7) << 24) | (msg.getAt(6) << 16)
 			| (msg.getAt(5) << 8) | (msg.getAt(4) );
 #ifdef DEBUG
-		std::cout << "dc " << iParam << std::endl;
+		LOG_DEBUG_S << "dc " << iParam;
 #endif
 	}
 	else if( (msg.getAt(0) == 'H') && (msg.getAt(1) == 'M') ) //* homing
@@ -488,7 +488,7 @@ void CanDriveWhistle::evalMsgTxPDO2(CanMsg msg)
 		pfVal=(float*)&iVal;
 		m_dMotorCurrAmps = *pfVal;
 //#ifdef DEBUG
-		std::cout << "Motor " << m_sName << ", IQ " << *pfVal << std::endl;
+		LOG_DEBUG_S << "Motor " << m_sName << ", IQ " << *pfVal;
 //#endif
 	}
 	else if( (msg.getAt(0) == 'A') && (msg.getAt(1) == 'N') ) // Analog Input
@@ -500,7 +500,7 @@ void CanDriveWhistle::evalMsgTxPDO2(CanMsg msg)
 		pfVal=(float*)&iVal;
 		m_dAnalogInputVolts=*pfVal;
 //#ifdef DEBUG
-		std::cout << "Motor " << m_sName << ", AN " << *pfVal << std::endl;
+		LOG_DEBUG_S << "Motor " << m_sName << ", AN " << *pfVal;
 //#endif
 	}
 	else if( (msg.getAt(0) == 'C') && (msg.getAt(1) == 'L') ) // Analog Input
@@ -511,7 +511,7 @@ void CanDriveWhistle::evalMsgTxPDO2(CanMsg msg)
 		float* pfVal;
 		pfVal=(float*)&iVal;
 #ifdef DEBUG
-		std::cout << "Motor " << m_sName << ", CL " << *pfVal << std::endl;
+		LOG_DEBUG_S << "Motor " << m_sName << ", CL " << *pfVal;
 #endif
 	}
 	else
@@ -528,7 +528,7 @@ void CanDriveWhistle::evalMsgTxSDO(CanMsg msg)
 	{
 		//* Received SDO Upload data (scs = 2)
 #ifdef DEBUG
-		std::cout << "SDO Upload data received" << std::endl;
+		LOG_DEBUG_S << "SDO Upload data received";
 #endif
 		if (isBitSet(msg.getAt(0), 1))
 		{
@@ -554,7 +554,7 @@ void CanDriveWhistle::evalMsgTxSDO(CanMsg msg)
 	{
 		//* Received SDO Download confirmation (scs = 3)
 #ifdef DEBUG
-		std::cout << "SDO Download confirmation received" << std::endl;
+		LOG_DEBUG_S << "SDO Download confirmation received";
 #endif
 	}
 }
@@ -567,7 +567,7 @@ bool CanDriveWhistle::init()
 	//* 2. receive the boot-up message to confirm the presence of the drive.
 	//sendNMTMsg(CMD_NMT_SW_RESET); //! Note: The reset command is implemented in the reset() method now.
 
-	std::cout << "CanDriveWhistle::init: Start init for drive " << m_sName << std::endl;
+	LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Start init for drive " << m_sName;
 
 	int cnt=0;
 	while(!m_bIsPresent && cnt < 100)
@@ -578,7 +578,7 @@ bool CanDriveWhistle::init()
 
 	if(!m_bIsPresent)
 	{
-		std::cout << "CanDriveWhistle::init: Drive not present! " << m_sName << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Drive not present! " << m_sName;
 		return false;
 	}
 
@@ -713,7 +713,7 @@ bool CanDriveWhistle::start()
 
 	if(!m_bMotorOn)
 	{
-		std::cout << "CanDriveWhistle::start: Drive not started! " << m_sName <<std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Drive not started! " << m_sNam;
 		bRet = false;
 	}
 
@@ -731,7 +731,7 @@ bool CanDriveWhistle::start()
 
 	if(!m_bStatusOk)
 	{
-		std::cout << "CanDriveWhistle::start: Status NOT OK! " << m_sName << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ ": Status NOT OK! " << m_sName;
 		bRet = false;
 	}
 
@@ -753,7 +753,7 @@ bool CanDriveWhistle::shutdown()
 {
 	bool bRet = true;
 
-	//std::cout << "...shutting down drive " << m_sName << std::endl;
+	//LOG_DEBUG_S << "...shutting down drive " << m_sName;
 
 	IntprtSetInt(8, 'M', 'O', 0, 0);
 	usleep(20000);
@@ -768,7 +768,7 @@ bool CanDriveWhistle::shutdown()
 
 	if(m_bMotorOn)
 	{
-		std::cout << "CanDriveWhistle::shutdown: Drive still running! " << m_sName << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Drive still running! " << m_sName;
 		bRet = false;
 	}
 
@@ -938,7 +938,7 @@ bool CanDriveWhistle::execHoming()
 			if(Msg.getAt(4) == 0)
 			{
 				// if 0 received: elmo disarmed homing after receiving the defined event
-				std::cout << "Got Homing-Signal "  << std::endl;
+				LOG_DEBUG_S << "Got Homing-Signal ";
 				m_bLimSwRight = true;
 				break;
 			}
@@ -954,12 +954,12 @@ bool CanDriveWhistle::execHoming()
 	// 7. see why finished (homed or timeout) and log out
 	if(iCnt>=2000)
 	{
-		std::cout << "Homing failed - limit switch " << m_sName << " not reached" << std::endl;
+		LOG_ERROR_S << "Homing failed - limit switch " << m_sName << " not reached";
 		bRet = false;
 	}
 	else
 	{
-		std::cout << "Homing successful - limit switch " << m_sName << " ok" << std::endl;
+		LOG_ERROR_S << "Homing successful - limit switch " << m_sName << " ok";
 		bRet = true;
 	}
 	IntprtSetInt(8, 'I', 'L', 2, 9);  // cob3-2
@@ -992,25 +992,25 @@ void CanDriveWhistle::positionCommandRad(double dPosGearRad, double dVelGearRadS
 		if(iVelEncIncrPeriod > m_DriveParam.getVelMax())
 		{
 			iVelEncIncrPeriod = (int)m_DriveParam.getVelMax();
-			std::cout << "CanDriveWhistle::positionCommand : Limit velocity to maximum allowed" << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Limit velocity to maximum allowed";
 		}
 	
 		if(iVelEncIncrPeriod < -m_DriveParam.getVelMax())
 		{
 			iVelEncIncrPeriod = (int)-m_DriveParam.getVelMax();
-			std::cout << "CanDriveWhistle::positionCommand : Limit velocity to maximum allowed" << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Limit velocity to maximum allowed";
 		}
 
 		if(iPosEncIncr > m_DriveParam.getPosMax())
 		{
 			iPosEncIncr = (int)m_DriveParam.getPosMax();
-			std::cout << "CanDriveWhistle::positionCommand : Limit position to maximum allowed" << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Limit position to maximum allowed";
 		}
 
 		if(iPosEncIncr < m_DriveParam.getPosMin())
 		{
 			iPosEncIncr = (int)m_DriveParam.getPosMin();
-			std::cout << "CanDriveWhistle::positionCommand : Limit position to maximum allowed" << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Limit position to maximum allowed";
 		}
 
 		if (iVelEncIncrPeriod==0)
@@ -1033,7 +1033,7 @@ void CanDriveWhistle::positionCommandRad(double dPosGearRad, double dVelGearRadS
 	}
 	else
 	{	
-		std::cout << "CanDriveWhistle::positionCommand : Position Command is not allowed in NON Position control mode!" << std::endl;
+		LOG_WARN_S << __PRETTY_FUNCTION__ << ": Position Command is not allowed in NON Position control mode!";
 	}
 	
 }
@@ -1062,13 +1062,13 @@ void CanDriveWhistle::positionSetPointRad(double dPosGearRad, double dVelGearRad
 		if(iPosEncIncr > m_DriveParam.getPosMax())
 		{
 			iPosEncIncr = (int)m_DriveParam.getPosMax();
-			std::cout << "CanDriveWhistle::positionCommand : Limit position to maximum allowed" << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Limit position to maximum allowed";
 		}
 
 		if(iPosEncIncr < m_DriveParam.getPosMin())
 		{
 			iPosEncIncr = (int)m_DriveParam.getPosMin();
-			std::cout << "CanDriveWhistle::positionCommand : Limit position to maximum allowed" << std::endl;
+			LOG_WARN_S << __PRETTY_FUNCTION__ << ": Limit position to maximum allowed";
 		}
 
 		if (iVelEncIncrPeriod==0)
@@ -1088,7 +1088,7 @@ void CanDriveWhistle::positionSetPointRad(double dPosGearRad, double dVelGearRad
 	}
 	else
 	{
-		std::cout << "CanDriveWhistle::positionSetPoint : Position Command is not allowed in NON Position control mode!" << std::endl;
+		LOG_WARN_S << __PRETTY_FUNCTION__ << ": Position Command is not allowed in NON Position control mode!";
 	}
 }
 
@@ -1097,7 +1097,7 @@ void CanDriveWhistle::velocityCommandRadS(double dVelGearRadS)
 {
 	int iVelEncIncrPeriod;
 
-        //std::cout<<"velocity in library: "<<dVelGearRadS<<" motor is "<<m_sName<<"\n";
+        //LOG_DEBUG_S<<"velocity in library: "<<dVelGearRadS<<" motor is "<<m_sName;
 	
 	if(m_iTypeMotion == MOTIONTYPE_VELCTRL)
 	{
@@ -1106,17 +1106,17 @@ void CanDriveWhistle::velocityCommandRadS(double dVelGearRadS)
 
 		if(iVelEncIncrPeriod > m_DriveParam.getVelMax())
 		{
-			std::cout << "Velocity limit exceeded. Asked for " << iVelEncIncrPeriod << " EncIncrements on " << m_sName << std::endl;
+			LOG_WARN_S << "Velocity limit exceeded. Asked for " << iVelEncIncrPeriod << " EncIncrements on " << m_sName;
 			iVelEncIncrPeriod = (int)m_DriveParam.getVelMax();
 		}
 
 		if(iVelEncIncrPeriod < -m_DriveParam.getVelMax())
 		{
-			std::cout << "Velocity limit exceeded. Asked for " << iVelEncIncrPeriod << " EncIncrements" << std::endl;
+			LOG_WARN_S << "Velocity limit exceeded. Asked for " << iVelEncIncrPeriod << " EncIncrements";
 			iVelEncIncrPeriod = -1 * (int)m_DriveParam.getVelMax();
 		}
 
-                //std::cout<<"sending: "<<iVelEncIncrPeriod<<"\n";
+                //LOG_WARN_S<<"sending: "<<iVelEncIncrPeriod;
 		//* Set Velocity Reference
 		IntprtSetInt(8, 'J', 'V', 0, iVelEncIncrPeriod);
 		//* Execute command
@@ -1124,7 +1124,7 @@ void CanDriveWhistle::velocityCommandRadS(double dVelGearRadS)
 	}
 	else
 	{
-		std::cout << "CanDriveWhistle::velocityCommand : Velocity Command is not allowed in NON Velocity control mode!" << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Velocity Command is not allowed in NON Velocity control mode!";
 	}
 }
 
@@ -1140,13 +1140,13 @@ void CanDriveWhistle::velocitySetPointRadS(double dVelGearRadS)
 
 		if(iVelEncIncrPeriod > m_DriveParam.getVelMax())
 		{
-			std::cout << "Velocity limit exceeded. Asked for " << iVelEncIncrPeriod << " EncIncrements on" << m_sName  << std::endl;
+			LOG_WARN_S << "Velocity limit exceeded. Asked for " << iVelEncIncrPeriod << " EncIncrements on" << m_sName;
 			iVelEncIncrPeriod = (int)m_DriveParam.getVelMax();
 		}
 
 		if(iVelEncIncrPeriod < -m_DriveParam.getVelMax())
 		{
-			std::cout << "Velocity limit exceeded. Asked for " << iVelEncIncrPeriod << " EncIncrements on " << m_sName  << std::endl;
+			LOG_WARN_S << "Velocity limit exceeded. Asked for " << iVelEncIncrPeriod << " EncIncrements on " << m_sName;
 			iVelEncIncrPeriod = -1 * (int)m_DriveParam.getVelMax();
 		}
 
@@ -1156,7 +1156,7 @@ void CanDriveWhistle::velocitySetPointRadS(double dVelGearRadS)
 	}
 	else
 	{
-		std::cout << "CanDriveWhistle::velocitySetPoint : Velocity Command is not allowed in NON Velocity control mode!" << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Velocity Command is not allowed in NON Velocity control mode!";
 	}
 }
 
@@ -1267,7 +1267,7 @@ bool CanDriveWhistle::checkWatchdogTime()
 	double dWatchTime = getTimeToLastMsg();
 	if (dWatchTime > CAN_WATCHDOG_TIMEOUT_SEC)
 	{
-		std::cout << "Reached watchdog timeout of drive " << m_sName << std::endl;
+		LOG_WARN_S << "Reached watchdog timeout of drive " << m_sName;
 		return true;
 	}
 	return false;
@@ -1300,12 +1300,12 @@ void CanDriveWhistle::torqueCommandNm(double dTorqueNm)
 		if  (fMotCurr > m_DriveParam.getCurrMax())
 		{
 			fMotCurr = m_DriveParam.getCurrMax();
-			std::cout << "Torque command too high: " << fMotCurr << " Amps. Torque has been limited to max current." << std::endl;
+			LOG_WARN_S << "Torque command too high: " << fMotCurr << " Amps. Torque has been limited to max current.";
 		}
 		if (fMotCurr < -m_DriveParam.getCurrMax())
 		{
 			fMotCurr = -m_DriveParam.getCurrMax();
-			std::cout << "Torque command too high: " << fMotCurr << " Amps. Torque has been limited to min current." << std::endl;
+			LOG_WARN_S << "Torque command too high: " << fMotCurr << " Amps. Torque has been limited to min current.";
 		}
 
 		//* send Command
@@ -1313,7 +1313,9 @@ void CanDriveWhistle::torqueCommandNm(double dTorqueNm)
 		IntprtSetFloat(8, 'T', 'C', 0, fMotCurr);
 	}
 	else
-		std::cout << "CanDriveWhistle::torqueCommand : Torque Command is not allowed in NON torque control mode!" << std::endl;
+    {
+		LOG_ERROR_S << ": Torque Command is not allowed in NON torque control mode!";
+    }
 }
 
 //-----------------------------------------------
@@ -1348,24 +1350,24 @@ bool CanDriveWhistle::evalStatusRegister(int iStatus)
 		//* Error detected
 		if (m_bFailureDetected == false)
 		{
-			std::cout << "Error of drive: " << m_sName << std::endl;
+			LOG_ERROR_S << "Error of drive: " << m_sName;
 
 			iStatus&=0x0000000E;
 
 			if( iStatus == 2)
-				std::cout << "- drive error under voltage" << std::endl;
+				LOG_ERROR_S << "- drive error under voltage";
 
 			else if( iStatus == 4)
-				std::cout << "- drive error over voltage" << std::endl;
+				LOG_ERROR_S << "- drive error over voltage";
 
 			else if( iStatus == 10)
-				std::cout << "- drive error short circuit" << std::endl;
+				LOG_ERROR_S << "- drive error short circuit";
 
 			else if( iStatus == 12)
-				std::cout << "- drive error overheating" << std::endl;
+				LOG_ERROR_S << "- drive error overheating";
 
 			else if( iStatus == 0) //! For completeness
-				std::cout << "- drive error OK" << std::endl;
+				LOG_DEBUG_S << "- drive error OK";
 
 			m_FailureStartTime.SetNow();
 
@@ -1374,7 +1376,7 @@ bool CanDriveWhistle::evalStatusRegister(int iStatus)
 
 			if (isBitSet(iStatus, 6)) //! Note: Maybe this case never happens, both bit 0 and 6 up at the same SR.
 			{
-				std::cout << "Motor " << m_sName << " failure latched" << std::endl;
+				LOG_ERROR_S << "Motor " << m_sName << " failure latched";
 			}
 		}
 		m_iNewMotorState = ST_MOTOR_FAILURE;
@@ -1386,7 +1388,7 @@ bool CanDriveWhistle::evalStatusRegister(int iStatus)
 		//* General failure
 		if (m_bFailureDetected == false)
 		{
-			std::cout << "Motor " << m_sName << " failure latched" << std::endl;
+			LOG_ERROR_S << "Motor " << m_sName << " failure latched";
 
 			m_FailureStartTime.SetNow();
 
@@ -1412,7 +1414,7 @@ bool CanDriveWhistle::evalStatusRegister(int iStatus)
 		{
 			if (m_iMotorState != ST_OPERATION_ENABLED)
 			{
-				//std::cout << "Motor " << m_sName << " operation enabled" << std::endl;
+				//LOG_DEBUG_S << "Motor " << m_sName << " operation enabled";
 			}
 			m_iNewMotorState = ST_OPERATION_ENABLED;
 		}
@@ -1420,7 +1422,7 @@ bool CanDriveWhistle::evalStatusRegister(int iStatus)
 		{
 			if (m_iMotorState != ST_OPERATION_DISABLED)
 			{
-				//std::cout << "Motor " << m_sName << " operation disabled" << std::endl;
+				//LOG_DEBUG_S << "Motor " << m_sName << " operation disabled";
 			}
 			m_iNewMotorState = ST_OPERATION_DISABLED;
 		}
@@ -1430,7 +1432,7 @@ bool CanDriveWhistle::evalStatusRegister(int iStatus)
 		{
 			if (m_bCurrentLimitOn == false)
 			{
-				//std::cout << "Motor " << m_sName << "current limit on" << std::endl;
+				//LOG_DEBUG_S << "Motor " << m_sName << "current limit on";
 			}
 			m_bCurrentLimitOn = true;
 		}
@@ -1448,81 +1450,81 @@ bool CanDriveWhistle::evalStatusRegister(int iStatus)
 void CanDriveWhistle::evalMotorFailure(int iFailure)
 {
 
-	std::cout << "Motor " << m_sName << " has a failure: " << iFailure << std::endl;
+	LOG_WARN_S << "Motor " << m_sName << " has a failure: " << iFailure;
 
 	if( isBitSet(iFailure, 2) )
 	{
-		std::cout << "- feedback loss" << std::endl;
+		LOG_ERROR_S << "- feedback loss";
 	}
 
 	if( isBitSet(iFailure, 3) )
 	{
-		std::cout << "- peak current excced" << std::endl;
+		LOG_ERROR_S << "- peak current excced";
 	}
 
 	if( isBitSet(iFailure, 4) )
 	{
-		std::cout << "- inhibit" << std::endl;
+		LOG_ERROR_S << "- inhibit";
 	}
 
 	if( isBitSet(iFailure, 7) )
 	{
-		std::cout << "- speed track error" << std::endl;
+		LOG_ERROR_S << "- speed track error";
 	}
 
 	if( isBitSet(iFailure, 8) )
 	{
-		std::cout << "- position track error" << std::endl;
+		LOG_ERROR_S << "- position track error";
 	}
 
 	if( isBitSet(iFailure, 9) )
 	{
-		std::cout << "- inconsistent database" << std::endl;
+		LOG_ERROR_S << "- inconsistent database";
 	}
 
 	if( isBitSet(iFailure, 11) )
 	{
-		std::cout << "- heartbeat failure" << std::endl;
+		LOG_ERROR_S << "- heartbeat failure";
 	}
 
 	if( isBitSet(iFailure, 12) )
 	{
-		std::cout << "- servo drive fault" << std::endl;
+		LOG_ERROR_S << "- servo drive fault";
 	}
 
 	if( isBitSet(iFailure, 16) )
 	{
-		std::cout << "- failed to find electrical zero of the motor" << std::endl;
+		LOG_ERROR_S << "- failed to find electrical zero of the motor";
 	}
 
 	if( isBitSet(iFailure, 17) )
 	{
-		std::cout << "- speed limit exceeded" << std::endl;
+		LOG_ERROR_S << "- speed limit exceeded";
 	}
 
 	if( isBitSet(iFailure, 18) )
 	{
-		std::cout << "- stack overflow. Fatal." << std::endl;
+		LOG_ERROR_S << "- stack overflow. Fatal.";
 	}
 
 	if( isBitSet(iFailure, 19) )
 	{
-		std::cout << "- CPU exception. Fatal." << std::endl;
+		LOG_ERROR_S << "- CPU exception. Fatal.";
 	}
 
 	if( isBitSet(iFailure, 21) )
 	{
-		std::cout << "- motor stuck" << std::endl;
+		LOG_ERROR_S << "- motor stuck";
 	}
 
 	if( isBitSet(iFailure, 22) )
 	{
-		std::cout << "- position limit exceeded" << std::endl;
+		LOG_ERROR_S << "- position limit exceeded";
 	}
 
 	if( isBitSet(iFailure, 29) )
 	{
-		std::cout << "- cannot start motor" << std::endl;
+		LOG_ERROR_S << "- cannot start motor";
 	}
 
 }
@@ -1561,7 +1563,7 @@ bool CanDriveWhistle::setTypeMotion(MotionType iType)
 
 		if (m_bMotorOn)
 		{
-			std::cout << "Motor " << m_sName << " Could NOT change Unit Mode to POSITION controlled. Could NOT stop motor" << std::endl;
+			LOG_ERROR_S << "Motor " << m_sName << " Could NOT change Unit Mode to POSITION controlled. Could NOT stop motor";
 			return false;
 		}
 	}
@@ -1584,7 +1586,7 @@ bool CanDriveWhistle::setTypeMotion(MotionType iType)
 		IntprtSetInt(8, 'D', 'C', 0, iMaxDcc);
 
 #ifdef DEBUG
-		std::cout << "Motor " << m_sName << " Unit Mode switched to: POSITION controlled" << std::endl;
+		LOG_DEBUG_S << "Motor " << m_sName << " Unit Mode switched to: POSITION controlled";
 #endif
 	}
 	else if (iType == MOTIONTYPE_VELCTRL)
@@ -1602,7 +1604,7 @@ bool CanDriveWhistle::setTypeMotion(MotionType iType)
 		IntprtSetInt(8, 'D', 'C', 0, iMaxDcc);
 
 #ifdef DEBUG
-		std::cout << "Motor " << m_sName << " Unit Mode switched to: VELOCITY controlled" << std::endl;
+		LOG_DEBUG_S << "Motor " << m_sName << " Unit Mode switched to: VELOCITY controlled";
 #endif
 	}
 	else
@@ -1614,13 +1616,13 @@ bool CanDriveWhistle::setTypeMotion(MotionType iType)
 		IntprtSetInt(8, 'R', 'M', 0, 0);
 
 #ifdef DEBUG
-		std::cout << "Motor " << m_sName << " Unit Mode switched to: TORQUE controlled" << std::endl;
+		LOG_DEBUG_S << "Motor " << m_sName << " Unit Mode switched to: TORQUE controlled";
 #endif
 	}
 	
 	//usleep(100000);
 	m_iTypeMotion = iType;
-        
+
         if (motor_on)
 	{
                 //* switch Motor back ON (as it was before entering the function)
@@ -1636,7 +1638,7 @@ bool CanDriveWhistle::setTypeMotion(MotionType iType)
 
 		if (!m_bMotorOn)
 		{
-			std::cout << "Motor " << m_sName << " still OFF!!" << std::endl;
+			LOG_ERROR_S << "Motor " << m_sName << " still OFF!!";
 			return false;
 		}
 	}

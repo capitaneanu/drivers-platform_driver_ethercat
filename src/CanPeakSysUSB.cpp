@@ -127,7 +127,7 @@ void CANPeakSysUSB::init(std::string dev)
 	if (!m_handle)
 	{
 		// Fatal error
-		std::cout << "Cannot open CAN on USB: " << strerror(errno) << std::endl;
+		LOG_ERROR_S << "Cannot open CAN on USB: " << strerror(errno);
 		sleep(3);
 		exit(0);
 	}
@@ -172,7 +172,7 @@ bool CANPeakSysUSB::transmitMsg(CanMsg CMsg, bool bBlocking)
 
 	if (!m_bInitialized)
 	{
-		std::cout << "CANPeakSysUSB::transmitMsg Error: interface not initialized!" << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": interface not initialized!";
 		return false;
 	}
 	// copy CMsg to TPCmsg
@@ -187,7 +187,7 @@ bool CANPeakSysUSB::transmitMsg(CanMsg CMsg, bool bBlocking)
 	
 	if(iRet != CAN_ERR_OK) {
 #ifdef __DEBUG__
-		std::cout << "CANPeakSysUSB::transmitMsg An error occured while sending..." << iRet << std::endl;		
+		LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": An error occured while sending..." << iRet;		
 		outputDetailedStatus();
 #endif		
 		bRet = false;
@@ -199,19 +199,19 @@ bool CANPeakSysUSB::transmitMsg(CanMsg CMsg, bool bBlocking)
 
 	if(iRet < 0)
 	{
-		std::cout <<  "CANPeakSysUSB::transmitMsg, system error: " << iRet << std::endl;
+		LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": system error: " << iRet;
 		bRet = false;
 	} else if((iRet & CAN_ERR_BUSOFF) != 0) {
-		std::cout <<  "CANPeakSysUSB::transmitMsg, BUSOFF detected" << std::endl;
+		LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": BUSOFF detected";
 		//Try to restart CAN-Device
-		std::cout <<  "Trying to re-init Hardware..." << std::endl;
+		LOG_DEBUG_S << __PRETTY_FUNCTION__ <<  "Trying to re-init Hardware...";
 		bRet = initCAN();
 	
 	} else if((iRet & CAN_ERR_ANYBUSERR) != 0) {
-		std::cout <<  "CANPeakSysUSB::transmitMsg, ANYBUSERR" << std::endl;
+		LOG_DEBUG_S << __PRETTY_FUNCTION__ <<  ": ANYBUSERR";
 	
 	} else if( (iRet & (~CAN_ERR_QRCVEMPTY)) != 0) {
-		std::cout << "CANPeakSysUSB::transmitMsg, CAN_STATUS: " << iRet << std::endl;
+		LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": CAN_STATUS: " << iRet;
 		bRet = false;
 	}
 #endif
@@ -233,7 +233,7 @@ bool CANPeakSysUSB::receiveMsg(CanMsg* pCMsg)
 
 	if (!m_bInitialized)
 	{
-		std::cout << "CANPeakSysUSB::receiveMsg Error: interface not initialized!" << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": interface not initialized!";
 		return bRet;
 	}
 
@@ -249,13 +249,13 @@ bool CANPeakSysUSB::receiveMsg(CanMsg* pCMsg)
 	}
 	else if( (iRet & (~CAN_ERR_QRCVEMPTY)) != 0) //no"empty-queue"-status
 	{
-		std::cout << "CANPeakSysUSB::receiveMsg, CAN_STATUS: " << iRet << std::endl;
+		LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": CAN_STATUS: " << iRet;
 		pCMsg->set(0, 0, 0, 0, 0, 0, 0, 0);
 	}
 	
 	//catch status messages, these could be further processed in overlying software to identify and handle CAN errors
 	if( TPCMsg.Msg.MSGTYPE == MSGTYPE_STATUS ) {
-		std::cout << "CANPeakSysUSB::receiveMsg, status message catched:\nData is (CAN_ERROR_...) " << TPCMsg.Msg.DATA[3] << std::endl;
+		LOG_WARN_S << __PRETTY_FUNCTION__ << ": status message catched:\nData is (CAN_ERROR_...) " << TPCMsg.Msg.DATA[3];
 		pCMsg->setID(0);
 		pCMsg->set(0, 0, 0, 0, 0, 0, 0, 0);
 		//ToDo In case of Bus Error re-initialize the CAN Interfaces
@@ -276,7 +276,7 @@ bool CANPeakSysUSB::receiveMsgRetry(CanMsg* pCMsg, int iNrOfRetry)
 
 	if (!m_bInitialized)
 	{
-		std::cout << "CANPeakSysUSB::receiveMsgRetry Error: interface not initialized!" << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": interface not initialized!";
 		return false;
 	}
 
@@ -299,7 +299,7 @@ bool CANPeakSysUSB::receiveMsgRetry(CanMsg* pCMsg, int iNrOfRetry)
 	// eval return value
 	if(iRet != CAN_ERR_OK)
 	{
-		std::cout << "CANPeakSysUSB::receiveMsgRetry, errorcode= " << nGetLastError() << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": errorcode= " << nGetLastError();
 		pCMsg->set(0, 0, 0, 0, 0, 0, 0, 0);
 		bRet = false;
 	}
@@ -323,14 +323,14 @@ int CANPeakSysUSB::availableMessages()
 
 	if (!m_bInitialized)
 	{
-		std::cout << "CANPeakSysUSB::availableMessages Error: interface not initialized!" << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": interface not initialized!";
 		return -1;
 	}
 
 	if ((rc=LINUX_CAN_Extended_Status(m_handle, &reads, &writes)) != CAN_ERR_OK)
 	{
 		if (rc != CAN_ERR_QRCVEMPTY){
-			std::cout << "CANPeakSysUSB::availableMessages: Error reading CAN Status:" << rc << std::endl;
+			LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Error reading CAN Status:" << rc;
 			return -1;
 		}
 		else return reads;
@@ -371,13 +371,13 @@ bool CANPeakSysUSB::initCAN() {
 
 	if(iRet == CAN_ERR_OK)
 	{
-		std::cout << "CANPeakSysUSB::CANPeakSysUSB(), init ok" << std::endl;
+		LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": init ok";
 		bRet = true;
 
 	}
 	else
 	{
-		std::cout << "CANPeakSysUSB::CANPeakSysUSB(), error in init" << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": error in init";
 		bRet = false;
 	}
 	
@@ -389,7 +389,7 @@ void CANPeakSysUSB::outputDetailedStatus() {
 	
 	LINUX_CAN_Statistics(m_handle, &diag);
 	
-	std::cout << "*************************\n"
+	LOG_INFO << "\n*************************\n"
 			<< "*** Detailed status output of CANPeakSys\n"
 			<< "*************************"
 			<< "\nIRQ-Level:     " << diag.wIrqLevel
@@ -398,6 +398,5 @@ void CANPeakSysUSB::outputDetailedStatus() {
 			<< "\nNo interrupts: " << diag.dwIRQcounter
 			<< "\nNo errors:     " << diag.dwErrorCounter
 			<< "\nError flag:    " << diag.wErrorFlag
-			<< "\nLast error:    " << diag.nLastError
-			<< std::endl;
+			<< "\nLast error:    " << diag.nLastError;
 }

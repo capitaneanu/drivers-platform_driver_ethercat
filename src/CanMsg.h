@@ -224,9 +224,9 @@ public:
 	 */
 	void print()
 	{
-		std::cout << "id= " << m_iID << " type= " << m_iType << " len= " << m_iLen << " time= " << m_iTimestamp << " data= " <<
+		LOG_INFO_S << "id= " << m_iID << " type= " << m_iType << " len= " << m_iLen << " time= " << m_iTimestamp << " data= " <<
 			(int)m_bDat[0] << " " << (int)m_bDat[1] << " " << (int)m_bDat[2] << " " << (int)m_bDat[3] << " " <<
-			(int)m_bDat[4] << " " << (int)m_bDat[5] << " " << (int)m_bDat[6] << " " << (int)m_bDat[7] << std::endl;
+			(int)m_bDat[4] << " " << (int)m_bDat[5] << " " << (int)m_bDat[6] << " " << (int)m_bDat[7];
 	}
 	
 	/**

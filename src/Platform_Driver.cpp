@@ -15,6 +15,8 @@
 #include "CanOverEthercat.h"
 #include "Platform_Driver.h"
 
+#include <base-logging/Logging.hpp>
+
 Platform_Driver::Platform_Driver(unsigned int num_motors, unsigned int num_nodes, unsigned int can_dev_type, std::string can_dev_addr, unsigned int watchdog)
 {	
     _num_motors = num_motors;
@@ -37,8 +39,6 @@ Platform_Driver::~Platform_Driver()
 			delete drive;
 		}
 	}	
-
-	std::cout << "Platform_Driver::~Platform_Driver: exiting the destructor... " << std::endl;
 }
 
 bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, GearMotorParamType steer_drive_params, GearMotorParamType walk_drive_params, GearMotorParamType pan_drive_params, GearMotorParamType tilt_drive_params, GearMotorParamType arm_drive_params, PltfCanParams can_params)
@@ -48,7 +48,7 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
         || can_params.Type.size() != _num_nodes
         || can_params.Active.size() != _num_nodes)
 	{
-		std::cout << "Platform_Driver::ReadConfiguration: The size of the can parameter vectors (CanId, Name, Type, Active) do not match the stated number of nodes" <<std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": The size of the can parameter vectors (CanId, Name, Type, Active) do not match the stated number of nodes" <<std::endl;
 		return false;
 	}
 
@@ -221,12 +221,12 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params, G
         }
 		else
 		{
-			std::cout << "Platform_Driver::ReadConfiguration: Unknown type "<< _can_parameters.Type[i] <<" of motor "<< _can_parameters.Name[i] <<std::endl;
+			LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Unknown type "<< _can_parameters.Type[i] <<" of motor "<< _can_parameters.Name[i] <<std::endl;
 			return false;
 		}
 	}
 
-    std::cout << "Platform_Driver::readConfiguration: Success" <<std::endl;
+    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Success" <<std::endl;
 
 	return true;
 }
@@ -236,15 +236,15 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
 	//* Platform configuration. CAN interface and CAN nodes setup.
 	if(!readConfiguration(wheel_drive_params, steer_drive_params, walk_drive_params, pan_drive_params, tilt_drive_params, arm_drive_params, can_params))
 	{
-		std::cout << "Platform_Driver::initPltf: Error in readConfiguration call" << std::endl;
+		LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Error in readConfiguration call";
 		return false;
 	}
 	
-    std::cout << "Platform_Driver::initPltf: Initializing EtherCAT interface" << std::endl;
+    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Initializing EtherCAT interface";
 
     if (!_can_interface->init())
     {
-        std::cout << "Platform_Driver::initPltf: Could not initialize EtherCAT interface" << std::endl;
+        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not initialize EtherCAT interface";
         return false;
     }
 
@@ -262,7 +262,7 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
             if (can_params.Active[i])
             {
                  CanDriveTwitter* drive = _can_drives[i];
-                 std::cout << "Platform_Driver::initPltf: Starting drive " << drive->getDeviceName() << std::endl;
+                 LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Starting drive " << drive->getDeviceName();
 
                  auto future = std::async(std::launch::async, &CanDriveTwitter::startup, drive);
                  auto tuple = std::make_tuple(drive, std::move(future));
@@ -287,17 +287,17 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params, GearMotorP
 
             if (future.get())
             {
-                std::cout << "Platform_Driver::initPltf: Drive " << drive->getDeviceName() << " started" << std::endl;
+                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << drive->getDeviceName() << " started";
             }
             else
             {
-                std::cout << "Platform_Driver::initPltf: Startup of drive " << drive->getDeviceName() << " failed" << std::endl;
+                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Startup of drive " << drive->getDeviceName() << " failed";
                 return false;
             }
         }
 	}
 
-    std::cout << "Platform_Driver::initPltf: Platform init success" << std::endl;
+    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Platform init success";
     return true;
 }
 
@@ -339,7 +339,7 @@ bool Platform_Driver::resetPltf()
 
 		if (!bRetMotor)
 		{
-			std::cout << "Resetting of Motor " << drive->getDeviceName() << " failed" << std::endl;
+			LOG_ERROR_S << "Resetting of Motor " << drive->getDeviceName() << " failed";
 		}
 
         bRet &= bRetMotor;
@@ -355,7 +355,7 @@ bool Platform_Driver::resetNode(unsigned int drive_id)
 
     if (!bRet)
     {
-        std::cout << "Resetting of Motor " << drive->getDeviceName() << " failed" << std::endl;
+        LOG_ERROR_S << "Resetting of Motor " << drive->getDeviceName() << " failed";
     }
 
 	return bRet;

@@ -162,7 +162,7 @@ bool CanDriveTwitter::startup()
 
         if (cnt-- == 0)
         {
-	        std::cout << "CanDriveTwitter::startup: Could not start up drive " << _device_name << ". Last state was " << state << std::endl;
+	        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not start up drive " << _device_name << ". Last state was " << state;
             return false;
         }
     }
@@ -203,12 +203,12 @@ bool CanDriveTwitter::shutdown()
 
         if (cnt-- == 0)
         {
-	        std::cout << "CanDriveTwitter::shutdown: Could not shut down drive " << _device_name << ". Last state was " << state << std::endl;
+	        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not shut down drive " << _device_name << ". Last state was " << state;
             return false;
         }
     }
 
-	std::cout << "CanDriveTwitter::shutdown: Drive " << _device_name << " shut down." << std::endl;
+	LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << _device_name << " shut down.";
 	return true;
 }
 
@@ -239,7 +239,7 @@ bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
     {
         if (cnt-- == 0)
         {
-	        std::cout << "CanDriveTwitter::setOperationMode: Could not set operation mode for drive " << _device_name << ". Current mode is " << current_mode << ". Requested mode is " << mode << "." << std::endl;
+	       LOG_WARN_S  << __PRETTY_FUNCTION__ << ": Could not set operation mode for drive " << _device_name << ". Current mode is " << current_mode << ". Requested mode is " << mode << ".";
             return false;
         }
 
@@ -247,7 +247,7 @@ bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
         current_mode = readOperationMode();
     }
 
-    std::cout << "CanDriveTwitter::setOperationMode: Successfully changed operation mode for drive " << _device_name << " to " << current_mode << std::endl;
+    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Successfully changed operation mode for drive " << _device_name << " to " << current_mode;
 
     return true;
 }
@@ -277,14 +277,14 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
 
         if (cnt-- == 0)
         {
-	        std::cout << "CanDriveTwitter::commandPostionRad: New set point " << _output->target_position << " was not acknowledged for drive " << _device_name << std::endl;
+	        LOG_INFO_S << __PRETTY_FUNCTION__ << ": New set point " << _output->target_position << " was not acknowledged for drive " << _device_name;
             break;
         }
     }
 
     _output->control_word &= 0xffef; // no new set point
 
-    //std::cout << "CanDriveTwitter::commandPositionRad: Drive: " << _device_name << " Current position: " << _input->actual_position << " Target position: " << _output->target_position << std::endl;
+    //LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive: " << _device_name << " Current position: " << _input->actual_position << " Target position: " << _output->target_position;
 }
 
 void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
@@ -400,7 +400,7 @@ CanDriveTwitter::DriveState CanDriveTwitter::readDriveState()
             return ST_FAULT_REACTION_ACTIVE;
     }
 
-    std::cout << "Drive " << _device_name << " in unknown state! Lower bit of status word: " << status_lower << std::endl;
+    LOG_WARN_S << "Drive " << _device_name << " in unknown state! Lower bit of status word: " << status_lower;
 }
 
 bool CanDriveTwitter::isError()
@@ -438,7 +438,7 @@ bool CanDriveTwitter::requestEmergencyStop()
 
         if (cnt-- == 0)
         {
-	        std::cout << "CanDriveTwitter::requestEmergencyStop: Could not emergency stop drive " << _device_name << ". Last state was " << state << std::endl;
+	        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not emergency stop drive " << _device_name << ". Last state was " << state;
             return false;
         }
     }
