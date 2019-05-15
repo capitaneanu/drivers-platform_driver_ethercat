@@ -3,3 +3,4 @@ logs/
 *.sw?
 *.o
 *.bin
+.vscode
