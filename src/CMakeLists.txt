@@ -1,10 +1,7 @@
-project(platform_driver)
+file(GLOB MY_HEADERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.h)
+file(GLOB MY_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
 
 rock_library(platform_driver
-    SOURCES CanOverEthercat.cpp CanDevice.cpp CanDeviceAtiFts.cpp CanDriveTwitter.cpp Platform_Driver.cpp
-    HEADERS CanOverEthercat.h CanDevice.h CanDeviceAtiFts.h CanDriveTwitter.h DriveParam.h Platform_Driver.h
+    SOURCES ${MY_SOURCES}
+    HEADERS ${MY_HEADERS}
     DEPS_PKGCONFIG soem base-lib)
-
-add_definitions(-Wall)
-add_definitions(-DBASE_LOGGING_NAMESPACE=${PROJECT_NAME}_lib)
-add_definitions(-DBASE_LOG_INFO)

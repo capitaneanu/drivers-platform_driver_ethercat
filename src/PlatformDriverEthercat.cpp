@@ -12,15 +12,15 @@
 #include "CanDeviceAtiFts.h"
 #include "CanDriveTwitter.h"
 #include "CanOverEthercat.h"
-#include "Platform_Driver.h"
+#include "PlatformDriverEthercat.h"
 
 #include <base-logging/Logging.hpp>
 
-Platform_Driver::Platform_Driver(unsigned int num_motors,
-                                 unsigned int num_nodes,
-                                 unsigned int can_dev_type,
-                                 std::string can_dev_addr,
-                                 unsigned int watchdog)
+PlatformDriverEthercat::PlatformDriverEthercat(unsigned int num_motors,
+                                               unsigned int num_nodes,
+                                               unsigned int can_dev_type,
+                                               std::string can_dev_addr,
+                                               unsigned int watchdog)
 {
     num_motors_ = num_motors;
     num_nodes_ = num_nodes;
@@ -28,7 +28,7 @@ Platform_Driver::Platform_Driver(unsigned int num_motors,
     can_interface_ = new CanOverEthercat(can_address_);
 }
 
-Platform_Driver::~Platform_Driver()
+PlatformDriverEthercat::~PlatformDriverEthercat()
 {
     if (can_interface_ != NULL)
     {
@@ -44,13 +44,13 @@ Platform_Driver::~Platform_Driver()
     }
 }
 
-bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params,
-                                        GearMotorParamType steer_drive_params,
-                                        GearMotorParamType walk_drive_params,
-                                        GearMotorParamType pan_drive_params,
-                                        GearMotorParamType tilt_drive_params,
-                                        GearMotorParamType arm_drive_params,
-                                        PltfCanParams can_params)
+bool PlatformDriverEthercat::readConfiguration(GearMotorParamType wheel_drive_params,
+                                               GearMotorParamType steer_drive_params,
+                                               GearMotorParamType walk_drive_params,
+                                               GearMotorParamType pan_drive_params,
+                                               GearMotorParamType tilt_drive_params,
+                                               GearMotorParamType arm_drive_params,
+                                               PltfCanParams can_params)
 {
     if (can_params.CanId.size() != num_nodes_    //
         || can_params.Name.size() != num_nodes_  //
@@ -239,13 +239,13 @@ bool Platform_Driver::readConfiguration(GearMotorParamType wheel_drive_params,
     return true;
 }
 
-bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params,
-                               GearMotorParamType steer_drive_params,
-                               GearMotorParamType walk_drive_params,
-                               GearMotorParamType pan_drive_params,
-                               GearMotorParamType tilt_drive_params,
-                               GearMotorParamType arm_drive_params,
-                               PltfCanParams can_params)
+bool PlatformDriverEthercat::initPltf(GearMotorParamType wheel_drive_params,
+                                      GearMotorParamType steer_drive_params,
+                                      GearMotorParamType walk_drive_params,
+                                      GearMotorParamType pan_drive_params,
+                                      GearMotorParamType tilt_drive_params,
+                                      GearMotorParamType arm_drive_params,
+                                      PltfCanParams can_params)
 {
     //* Platform configuration. CAN interface and CAN nodes setup.
     if (!readConfiguration(wheel_drive_params,
@@ -323,7 +323,7 @@ bool Platform_Driver::initPltf(GearMotorParamType wheel_drive_params,
     return true;
 }
 
-bool Platform_Driver::shutdownPltf()
+bool PlatformDriverEthercat::shutdownPltf()
 {
     bool bRet = true;
     // shut down all motors
@@ -334,7 +334,7 @@ bool Platform_Driver::shutdownPltf()
     return bRet;
 }
 
-bool Platform_Driver::shutdownNode(unsigned int drive_id)
+bool PlatformDriverEthercat::shutdownNode(unsigned int drive_id)
 {
     bool bRet = true;
     // shut down the motor
@@ -342,7 +342,7 @@ bool Platform_Driver::shutdownNode(unsigned int drive_id)
     return bRet;
 }
 
-bool Platform_Driver::startNode(unsigned int drive_id)
+bool PlatformDriverEthercat::startNode(unsigned int drive_id)
 {
     bool bRet = true;
     // start up the motor
@@ -350,7 +350,7 @@ bool Platform_Driver::startNode(unsigned int drive_id)
     return bRet;
 }
 
-bool Platform_Driver::resetPltf()
+bool PlatformDriverEthercat::resetPltf()
 {
     bool bRetMotor = true;
     bool bRet = true;
@@ -370,7 +370,7 @@ bool Platform_Driver::resetPltf()
     return bRet;
 }
 
-bool Platform_Driver::resetNode(unsigned int drive_id)
+bool PlatformDriverEthercat::resetNode(unsigned int drive_id)
 {
     auto drive = can_drives_[drive_id];
     bool bRet = drive->reset();
@@ -383,41 +383,43 @@ bool Platform_Driver::resetNode(unsigned int drive_id)
     return bRet;
 }
 
-void Platform_Driver::nodePositionCommandRad(unsigned int drive_id, double dPosGearRad)
+void PlatformDriverEthercat::nodePositionCommandRad(unsigned int drive_id,
+                                                    double dPosGearRad,
+                                                    double dVelGearRadS)
 {
     can_drives_[drive_id]->commandPositionRad(dPosGearRad);
 }
 
-void Platform_Driver::nodeVelocityCommandRadS(unsigned int drive_id, double dVelGearRadS)
+void PlatformDriverEthercat::nodeVelocityCommandRadS(unsigned int drive_id, double dVelGearRadS)
 {
     can_drives_[drive_id]->commandVelocityRadSec(dVelGearRadS);
 }
 
-void Platform_Driver::nodeTorqueCommandNm(unsigned int drive_id, double dTorqueNm)
+void PlatformDriverEthercat::nodeTorqueCommandNm(unsigned int drive_id, double dTorqueNm)
 {
     can_drives_[drive_id]->commandTorqueNm(dTorqueNm);
 }
 
-void Platform_Driver::getNodePositionRad(unsigned int drive_id, double* pdAngleGearRad)
+void PlatformDriverEthercat::getNodePositionRad(unsigned int drive_id, double* pdAngleGearRad)
 {
     *pdAngleGearRad = can_drives_[drive_id]->readPositionRad();
 }
 
-void Platform_Driver::getNodeVelocityRadS(unsigned int drive_id, double* pdVelocityRadS)
+void PlatformDriverEthercat::getNodeVelocityRadS(unsigned int drive_id, double* pdVelocityRadS)
 {
     *pdVelocityRadS = can_drives_[drive_id]->readVelocityRadSec();
 }
 
-void Platform_Driver::getNodeTorqueNm(unsigned int drive_id, double* pdTorqueNm)
+void PlatformDriverEthercat::getNodeTorqueNm(unsigned int drive_id, double* pdTorqueNm)
 {
     *pdTorqueNm = can_drives_[drive_id]->readTorqueNm();
 }
 
-bool Platform_Driver::getNodeData(unsigned int drive_id,
-                                  double* pdAngleGearRad,
-                                  double* pdVelGearRadS,
-                                  double* pdCurrentAmp,
-                                  double* pdTorqueNm)
+bool PlatformDriverEthercat::getNodeData(unsigned int drive_id,
+                                         double* pdAngleGearRad,
+                                         double* pdVelGearRadS,
+                                         double* pdCurrentAmp,
+                                         double* pdTorqueNm)
 {
     if (!can_drives_[drive_id]->isError())
     {
@@ -432,12 +434,15 @@ bool Platform_Driver::getNodeData(unsigned int drive_id,
     return false;
 }
 
-void Platform_Driver::getNodeAnalogInput(unsigned int drive_id, double* pdAnalogInput)
+void PlatformDriverEthercat::getNodeAnalogInput(unsigned int drive_id, double* pdAnalogInput)
 {
     *pdAnalogInput = can_drives_[drive_id]->readAnalogInput();
 }
 
-void Platform_Driver::getNodeFtsForceN(unsigned int fts_id, double* fx, double* fy, double* fz)
+void PlatformDriverEthercat::getNodeFtsForceN(unsigned int fts_id,
+                                              double* fx,
+                                              double* fy,
+                                              double* fz)
 {
     Eigen::Vector3d force = can_fts_[fts_id]->readForceN();
 
@@ -446,7 +451,10 @@ void Platform_Driver::getNodeFtsForceN(unsigned int fts_id, double* fx, double* 
     *fz = force[2];
 }
 
-void Platform_Driver::getNodeFtsTorqueNm(unsigned int fts_id, double* tx, double* ty, double* tz)
+void PlatformDriverEthercat::getNodeFtsTorqueNm(unsigned int fts_id,
+                                                double* tx,
+                                                double* ty,
+                                                double* tz)
 {
     Eigen::Vector3d torque = can_fts_[fts_id]->readTorqueNm();
 

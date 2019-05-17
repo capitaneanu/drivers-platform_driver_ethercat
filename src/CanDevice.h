@@ -19,6 +19,7 @@ class CanDevice
 
     unsigned int getCanId();
     std::string getDeviceName();
+
   protected:
     CanOverEthercat* _can_interface;
     unsigned int _can_id;

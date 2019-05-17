@@ -2,83 +2,34 @@
 
 #include <string>
 #include <vector>
+#include "CanEnumsAndStructs.h"
+#include "PlatformDriver.h"
 
 class CanDeviceAtiFts;
 class CanDriveTwitter;
 class CanOverEthercat;
-
-enum MotorStatus
-{
-    INACTIVE,
-    ACTIVE
-};
-
-/**
- * List of Drive types. Motor characteristics are grouped depending on the type.
- */
-enum MotorType
-{
-    WHEEL_DRIVE,
-    WHEEL_STEER,
-    WHEEL_WALK,
-    MANIP_JOINT,
-    MAST_PAN,
-    MAST_TILT,
-    FT_SENSOR,
-};
-
-struct PltfCanParams
-{
-    std::vector<int> CanId;
-    std::vector<std::string> Name;
-    std::vector<MotorType> Type;
-    std::vector<MotorStatus> Active;
-};
-
-/**
- * Parameters characterizing a motor type. Note DriveParam class attribute values to be set.
- */
-struct GearMotorParamType
-{
-    int iEncIncrPerRevMot;
-    double dGearRatio;
-    double dBeltRatio;
-    int iSign;
-    double dPosLimitLowIncr;
-    double dPosLimitHighIncr;
-    double dVelMaxEncIncrS;
-    double dPtpVelDefaultIncrS;
-    double dAccIncrS2;
-    double dDecIncrS2;
-    bool bIsSteer;
-    double dCurrentToTorque;
-    double dCurrMax;
-    int iEncOffsetIncr;
-    double dAnalogFactor;
-    double dNominalCurrent;
-};
 
 /**
  * Represents and Controls all Drive components on an arbitrary platform.
  * Drives shall be connected in a CAN Bus network and comply with the CANopen protocol to control
  * different types of motors.
  */
-class Platform_Driver
+class PlatformDriverEthercat : public PlatformDriver
 {
   public:
     /**
      * Default constructor.
      */
-    Platform_Driver(unsigned int num_motors,
-                    unsigned int num_nodes,
-                    unsigned int can_dev_type,
-                    std::string can_dev_addr,
-                    unsigned int watchdog);
+    PlatformDriverEthercat(unsigned int num_motors,
+                           unsigned int num_nodes,
+                           unsigned int can_dev_type,
+                           std::string can_dev_addr,
+                           unsigned int watchdog);
 
     /**
      * Default destructor.
      */
-    ~Platform_Driver();
+    ~PlatformDriverEthercat();
 
     /**
      * Initializes all CAN nodes of the platform and performs homing procedure of the steered
@@ -105,12 +56,6 @@ class Platform_Driver
                            GearMotorParamType tilt_drive_params,
                            GearMotorParamType arm_drive_params,
                            PltfCanParams can_params);
-
-    /**
-     * Checks for errors in the platform drives.
-     * @return True if an error is found.
-     */
-    bool isPltfError();
 
     /**
      * Shuts down the platform.
@@ -154,9 +99,9 @@ class Platform_Driver
      * Node must be in position control mode
      * @param drive_id selects the can node
      * @param dPosGearRad position command in radians
-     * @param dVelGearRadS velocity command in radian per second
+     * @param dVelGearRadS velocity command in radian per second, not used in ethercat driver
      */
-    void nodePositionCommandRad(unsigned int drive_id, double dPosRad);
+    void nodePositionCommandRad(unsigned int drive_id, double dPosRad, double dVelRadS = 0);
 
     /**
      * Sends velocity command for specific can node.
@@ -208,7 +153,7 @@ class Platform_Driver
 
     void getNodeFtsTorqueNm(unsigned int fts_id, double* tx, double* ty, double* tz);
 
-  private:
+  protected:
     // Address of the can device interface in the system
     std::string can_address_;
     // CAN interface device class object (PeakSysUSB)

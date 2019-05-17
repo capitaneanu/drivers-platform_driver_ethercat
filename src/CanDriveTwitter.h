@@ -1,7 +1,4 @@
-#ifndef CANDRIVETWITTER_INCLUDEDEF_H
-#define CANDRIVETWITTER_INCLUDEDEF_H
-
-//* include files ---------------------------------------------
+#pragma once
 
 #include "CanDevice.h"
 #include "DriveParam.h"
@@ -13,115 +10,117 @@ class CanOverEthercat;
  */
 class CanDriveTwitter : public CanDevice
 {
-public:
-	/**
-	 * The constructor
-	 */
-	CanDriveTwitter(CanOverEthercat *can_interface, unsigned int can_id, std::string device_name);
+  public:
+    /**
+     * The constructor
+     */
+    CanDriveTwitter(CanOverEthercat* can_interface, unsigned int can_id, std::string device_name);
 
-	/**
-	 * The destructor
-	 */
-	~CanDriveTwitter();
+    /**
+     * The destructor
+     */
+    ~CanDriveTwitter();
 
-	bool configure();
-    void setInputPdo(unsigned char *input_pdo);
-    void setOutputPdo(unsigned char *output_pdo);
+    bool configure();
+    void setInputPdo(unsigned char* input_pdo);
+    void setOutputPdo(unsigned char* output_pdo);
 
-	/**
-	 * Brings the drive to operation enable state. 
-	 * After calling the drive accepts velocity and position commands.
-	 * @return True if drive is started successfully. StatusRegister is also evaluated to ensure a non-faulty state. False otherwise.
-	 */
-	bool startup();
+    /**
+     * Brings the drive to operation enable state.
+     * After calling the drive accepts velocity and position commands.
+     * @return True if drive is started successfully. StatusRegister is also evaluated to ensure a
+     * non-faulty state. False otherwise.
+     */
+    bool startup();
 
-	/**
-	 * Brings the drive to switch on disabled state. 
-	 * After calling the drive won't accepts velocity and position commands.
-	 * @return True if drive shutdown successful.
-	 */
-	bool shutdown();
+    /**
+     * Brings the drive to switch on disabled state.
+     * After calling the drive won't accepts velocity and position commands.
+     * @return True if drive shutdown successful.
+     */
+    bool shutdown();
 
-	/**
-	 * Resets the drive.
-	 * @return True if re-initialization was successful. False otherwise.
-	 */
-	bool reset();
+    /**
+     * Resets the drive.
+     * @return True if re-initialization was successful. False otherwise.
+     */
+    bool reset();
 
-	/**
-	 * Sends position command
-	 * @param position_rad Position command in Radians
-	 */
-	void commandPositionRad(double position_rad);
+    /**
+     * Sends position command
+     * @param position_rad Position command in Radians
+     */
+    void commandPositionRad(double position_rad);
 
-	/**
-	 * Sends velocity command.
-	 * Use this function only in velocity control mode.
-	 * @param velocity_rad_sec Velocity command in Radians/sec.
-	 */
-	void commandVelocityRadSec(double velocity_rad_sec);
+    /**
+     * Sends velocity command.
+     * Use this function only in velocity control mode.
+     * @param velocity_rad_sec Velocity command in Radians/sec.
+     */
+    void commandVelocityRadSec(double velocity_rad_sec);
 
     /**
      * Sends Torque command
-	 * Use this function only in torque control mode.
+     * Use this function only in torque control mode.
      * @param torque_nm is the required motor torque in Nm.
      */
     void commandTorqueNm(double torque_nm);
 
-	/**
-	 * Reads the last received value of the drive position.
-	 * @return The value of the current position of the motor.
-	 */
-	double readPositionRad();
+    /**
+     * Reads the last received value of the drive position.
+     * @return The value of the current position of the motor.
+     */
+    double readPositionRad();
 
-	/**
-	 * Reads the last received value of the drive Velocity.
-	 * @return The value of the current Velocity of the motor.
-	 */
-	double readVelocityRadSec();
+    /**
+     * Reads the last received value of the drive Velocity.
+     * @return The value of the current Velocity of the motor.
+     */
+    double readVelocityRadSec();
 
-	/**
-	 * Reads the last received value of the motor Torque.
-	 * @return The value (in Nm) of the current motor torque is stored in this pointer.
-	 */
-	double readTorqueNm();
+    /**
+     * Reads the last received value of the motor Torque.
+     * @return The value (in Nm) of the current motor torque is stored in this pointer.
+     */
+    double readTorqueNm();
 
-	/**
-	 * Returns received value from analog input.
-	 */
-	double readAnalogInput();
+    /**
+     * Returns received value from analog input.
+     */
+    double readAnalogInput();
 
-	/**
-	 * Returns true if an error has been detected.
-	 * @return boolean with result.
-	 */
-	bool isError();
-	
-	/**
-	 * Returns a bitfield containing information about the current error.
-	 * @return unsigned int with bitcoded error.
-	 */
-	unsigned int getError();
+    /**
+     * Returns true if an error has been detected.
+     * @return boolean with result.
+     */
+    bool isError();
 
-	/**
-	 * Enable the emergency stop.
-	 * @return true if the result of the process is successful
-	 */
-	bool requestEmergencyStop();
+    /**
+     * Returns a bitfield containing information about the current error.
+     * @return unsigned int with bitcoded error.
+     */
+    unsigned int getError();
 
-	/**
-	 * Sets the drive parameters.
-	 * @param driveParam is the object of the DriveParam class that contains the values of the drive parameters.
-	 */
-	void setDriveParam(DriveParam drive_param);
+    /**
+     * Enable the emergency stop.
+     * @return true if the result of the process is successful
+     */
+    bool requestEmergencyStop();
 
-	/**
-	 * Gets the drive parameters
-	 * @return Pointer to the object of type DriveParam that is contained in the drive class.
-	 */
-	DriveParam *getDriveParam();
+    /**
+     * Sets the drive parameters.
+     * @param driveParam is the object of the DriveParam class that contains the values of the drive
+     * parameters.
+     */
+    void setDriveParam(DriveParam drive_param);
 
-private:
+    /**
+     * Gets the drive parameters
+     * @return Pointer to the object of type DriveParam that is contained in the drive class.
+     */
+    DriveParam* getDriveParam();
+
+  private:
     enum class DriveObject
     {
         // Error control objects
@@ -224,33 +223,34 @@ private:
         DIGITAL_OUTPUTS = 0x60fe,
     };
 
-	/**
-	 * States of the CANOpen drive state machine.
-	 */
-	enum DriveState
-	{
-		ST_NOT_READY_TO_SWITCH_ON,
-		ST_SWITCH_ON_DISABLED,
-		ST_READY_TO_SWITCH_ON,
-		ST_SWITCHED_ON,
-		ST_OPERATION_ENABLE,
-		ST_QUICK_STOP_ACTIVE,
+    /**
+     * States of the CANOpen drive state machine.
+     */
+    enum DriveState
+    {
+        ST_NOT_READY_TO_SWITCH_ON,
+        ST_SWITCH_ON_DISABLED,
+        ST_READY_TO_SWITCH_ON,
+        ST_SWITCHED_ON,
+        ST_OPERATION_ENABLE,
+        ST_QUICK_STOP_ACTIVE,
         ST_FAULT_REACTION_ACTIVE,
-		ST_FAULT
-	};
+        ST_FAULT
+    };
 
-	/**
-	 * Enum with different operation modes of the controller, either position, velocity or torque control.
-	 */
-	enum OperationMode
-	{
-		OM_PROFILE_POSITION = 1,
+    /**
+     * Enum with different operation modes of the controller, either position, velocity or torque
+     * control.
+     */
+    enum OperationMode
+    {
+        OM_PROFILE_POSITION = 1,
         OM_PROFILE_VELOCITY = 3,
         OM_PROFILE_TORQUE = 4,
-		OM_CYCSYNC_POSITION = 8,
+        OM_CYCSYNC_POSITION = 8,
         OM_CYCSYNC_VELOCITY = 9,
         OM_CYCSYNC_TORQUE = 10
-	};
+    };
 
     typedef struct RxPdo
     {
@@ -272,13 +272,13 @@ private:
     } TxPdo;
 
     DriveParam _drive_param;
-    TxPdo *_input;
-    RxPdo *_output;
+    TxPdo* _input;
+    RxPdo* _output;
 
-	/**
-	 * Returns the state of the drive
-	 */
-	DriveState readDriveState();
+    /**
+     * Returns the state of the drive
+     */
+    DriveState readDriveState();
     OperationMode readOperationMode();
     bool commandOperationMode(OperationMode mode);
 
@@ -296,5 +296,3 @@ private:
     bool checkSetPointAcknowledge();
 };
 
-//-----------------------------------------------
-#endif

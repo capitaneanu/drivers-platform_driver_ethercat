@@ -4,8 +4,16 @@
 #include "CanOverEthercat.h"
 #include "base-logging/Logging.hpp"
 
-CanDeviceAtiFts::CanDeviceAtiFts(CanOverEthercat *can_interface, unsigned int can_id, std::string device_name)
-: CanDevice(can_interface, can_id, device_name), _input(NULL), _output(NULL), _counts_per_force(1), _counts_per_torque(1), _force_bias(0, 0, 0), _torque_bias(0, 0, 0)
+CanDeviceAtiFts::CanDeviceAtiFts(CanOverEthercat* can_interface,
+                                 unsigned int can_id,
+                                 std::string device_name)
+    : CanDevice(can_interface, can_id, device_name),
+      _input(NULL),
+      _output(NULL),
+      _counts_per_force(1),
+      _counts_per_torque(1),
+      _force_bias(0, 0, 0),
+      _torque_bias(0, 0, 0)
 
 {
     if (device_name == "FTS_FL")
@@ -40,9 +48,7 @@ CanDeviceAtiFts::CanDeviceAtiFts(CanOverEthercat *can_interface, unsigned int ca
     }
 }
 
-CanDeviceAtiFts::~CanDeviceAtiFts()
-{
-}
+CanDeviceAtiFts::~CanDeviceAtiFts() {}
 
 bool CanDeviceAtiFts::configure()
 {
@@ -58,13 +64,14 @@ bool CanDeviceAtiFts::configure()
 
     std::vector<SdoWrite> sdo_writes;
 
-    //sdo_writes.push_back(SdoWrite{0x1c12, 0, 1, 0x00});
+    // sdo_writes.push_back(SdoWrite{0x1c12, 0, 1, 0x00});
 
     bool success = true;
 
     for (auto sdo_write : sdo_writes)
     {
-        success &= _can_interface->sdoWrite(_can_id, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
+        success &= _can_interface->sdoWrite(
+            _can_id, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
     }
 
     int force_unit;
@@ -76,8 +83,10 @@ bool CanDeviceAtiFts::configure()
     LOG_DEBUG_S << "Force unit of sensor " << _device_name << " is " << force_unit;
     LOG_DEBUG_S << "Torque unit of sensor " << _device_name << " is " << torque_unit;
 
-    success &= _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x31, &_counts_per_force);
-    success &= _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x32, &_counts_per_torque);
+    success &=
+        _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x31, &_counts_per_force);
+    success &=
+        _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x32, &_counts_per_torque);
 
     if (success)
     {
@@ -91,33 +100,21 @@ bool CanDeviceAtiFts::configure()
     }
 }
 
-void CanDeviceAtiFts::setInputPdo(unsigned char *input_pdo)
-{
-    _input = (TxPdo *)input_pdo;
-}
+void CanDeviceAtiFts::setInputPdo(unsigned char* input_pdo) { _input = (TxPdo*)input_pdo; }
 
-void CanDeviceAtiFts::setOutputPdo(unsigned char *output_pdo)
+void CanDeviceAtiFts::setOutputPdo(unsigned char* output_pdo)
 {
-    _output = (RxPdo *)output_pdo;
+    _output = (RxPdo*)output_pdo;
 
     _output->control_1 = 0x00000000;
     _output->control_2 = 0x00000000;
 }
 
-bool CanDeviceAtiFts::startup()
-{
-	return true;
-}
+bool CanDeviceAtiFts::startup() { return true; }
 
-bool CanDeviceAtiFts::shutdown()
-{	
-	return true;
-}
+bool CanDeviceAtiFts::shutdown() { return true; }
 
-bool CanDeviceAtiFts::reset()
-{
-	return shutdown() && startup();
-}
+bool CanDeviceAtiFts::reset() { return shutdown() && startup(); }
 
 Eigen::Vector3d CanDeviceAtiFts::readForceN()
 {
@@ -143,12 +140,6 @@ Eigen::Vector3d CanDeviceAtiFts::readTorqueNm()
     return torque;
 }
 
-bool CanDeviceAtiFts::isError()
-{
-    return false;
-}
+bool CanDeviceAtiFts::isError() { return false; }
 
-unsigned int CanDeviceAtiFts::getError()
-{
-    return 0;
-}
+unsigned int CanDeviceAtiFts::getError() { return 0; }

@@ -8,6 +8,7 @@
   <logo>http://</logo>
 
   <depend package="base/cmake" />
+  <depend package="base/types" />
   <depend package="drivers/pcan_pcie_mini" optional="1" />
   <depend package="drivers/soem" optional="1" />
 

@@ -1,8 +1,8 @@
 #pragma once
 
+#include <Eigen/Dense>
 #include "CanDevice.h"
 #include "DriveParam.h"
-#include <Eigen/Dense>
 
 class CanOverEthercat;
 
@@ -11,56 +11,58 @@ class CanOverEthercat;
  */
 class CanDeviceAtiFts : public CanDevice
 {
-public:
-	/**
-	 * The constructor
-	 */
-	CanDeviceAtiFts(CanOverEthercat *can_interface, unsigned int can_id, std::string device_name);
+  public:
+    /**
+     * The constructor
+     */
+    CanDeviceAtiFts(CanOverEthercat* can_interface, unsigned int can_id, std::string device_name);
 
-	/**
-	 * The destructor
-	 */
-	~CanDeviceAtiFts();
+    /**
+     * The destructor
+     */
+    ~CanDeviceAtiFts();
 
-	bool configure();
-    void setInputPdo(unsigned char *input_pdo);
-    void setOutputPdo(unsigned char *output_pdo);
+    bool configure();
+    void setInputPdo(unsigned char* input_pdo);
+    void setOutputPdo(unsigned char* output_pdo);
 
-	/**
-	 * Brings the drive to operation enable state.
-	 * After calling the drive accepts velocity and position commands.
-	 * @return True if drive is started successfully. StatusRegister is also evaluated to ensure a non-faulty state. False otherwise.
-	 */
-	bool startup();
+    /**
+     * Brings the drive to operation enable state.
+     * After calling the drive accepts velocity and position commands.
+     * @return True if drive is started successfully. StatusRegister is also evaluated to ensure a
+     * non-faulty state. False otherwise.
+     */
+    bool startup();
 
-	/**
-	 * Brings the drive to switch on disabled state.
-	 * After calling the drive won't accepts velocity and position commands.
-	 * @return True if drive shutdown successful.
-	 */
-	bool shutdown();
+    /**
+     * Brings the drive to switch on disabled state.
+     * After calling the drive won't accepts velocity and position commands.
+     * @return True if drive shutdown successful.
+     */
+    bool shutdown();
 
-	/**
-	 * Resets the drive.
-	 * @return True if re-initialization was successful. False otherwise.
-	 */
-	bool reset();
+    /**
+     * Resets the drive.
+     * @return True if re-initialization was successful. False otherwise.
+     */
+    bool reset();
 
     Eigen::Vector3d readForceN();
     Eigen::Vector3d readTorqueNm();
 
-	/**
-	 * Returns true if an error has been detected.
-	 * @return boolean with result.
-	 */
-	bool isError();
-	
-	/**
-	 * Returns a bitfield containing information about the current error.
-	 * @return unsigned int with bitcoded error.
-	 */
-	unsigned int getError();
-private:
+    /**
+     * Returns true if an error has been detected.
+     * @return boolean with result.
+     */
+    bool isError();
+
+    /**
+     * Returns a bitfield containing information about the current error.
+     * @return unsigned int with bitcoded error.
+     */
+    unsigned int getError();
+
+  private:
     enum DictionaryObject
     {
         TOOL_TRANSFORMATION = 0x2020,
@@ -92,8 +94,8 @@ private:
         uint32_t control_2;
     } RxPdo;
 
-    TxPdo *_input;
-    RxPdo *_output;
+    TxPdo* _input;
+    RxPdo* _output;
 
     int _counts_per_force;
     int _counts_per_torque;
