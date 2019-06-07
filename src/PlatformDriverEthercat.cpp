@@ -229,7 +229,7 @@ bool PlatformDriverEthercat::readConfiguration(GearMotorParamType wheel_drive_pa
         else
         {
             LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Unknown type " << can_parameters_.Type[i]
-                        << " of motor " << can_parameters_.Name[i] << std::endl;
+                        << " of motor " << can_parameters_.Name[i];
             return false;
         }
     }

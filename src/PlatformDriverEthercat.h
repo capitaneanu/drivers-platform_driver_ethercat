@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include "CanEnumsAndStructs.h"
-#include "PlatformDriver.h"
 
 class CanDeviceAtiFts;
 class CanDriveTwitter;
@@ -14,7 +13,7 @@ class CanOverEthercat;
  * Drives shall be connected in a CAN Bus network and comply with the CANopen protocol to control
  * different types of motors.
  */
-class PlatformDriverEthercat : public PlatformDriver
+class PlatformDriverEthercat
 {
   public:
     /**
