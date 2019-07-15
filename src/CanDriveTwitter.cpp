@@ -44,7 +44,7 @@ bool CanDriveTwitter::configure()
     sdo_writes.push_back(SdoWrite{0x1c13, 3, 2, 0x1a0e});  // actual position
     sdo_writes.push_back(SdoWrite{0x1c13, 4, 2, 0x1a11});  // actual velocity
     sdo_writes.push_back(SdoWrite{0x1c13, 5, 2, 0x1a13});  // actual torque
-    sdo_writes.push_back(SdoWrite{0x1c13, 5, 2, 0x1a1d});  // analog input
+    sdo_writes.push_back(SdoWrite{0x1c13, 6, 2, 0x1a1d});  // analog input
     sdo_writes.push_back(SdoWrite{0x1c13, 0, 1, 0x06});    // enable
 
     // set commutation
@@ -364,8 +364,8 @@ bool CanDriveTwitter::checkSetPointAcknowledge()
 
 double CanDriveTwitter::readPositionRad()
 {
-    if (_device_name == "MAST_PAN")
-        LOG_DEBUG_S << "Current pos of MAST_PAN: " << _input->actual_position;
+    //if (_device_name == "MAST_PAN")
+    //    LOG_DEBUG_S << "Current pos of MAST_PAN: " << _input->actual_position;
 
     return _drive_param.getSign() * _drive_param.PosMotIncrToPosGearRad(_input->actual_position);
 }
@@ -384,7 +384,7 @@ double CanDriveTwitter::readTorqueNm()
     return _drive_param.getSign() * _input->actual_torque * rated_torque / (1000 * 1000);
 }
 
-double CanDriveTwitter::readAnalogInput() { return _input->analog_input; }
+double CanDriveTwitter::readAnalogInputV() { return _input->analog_input * 1.0 / 1000.0; }
 
 CanDriveTwitter::DriveState CanDriveTwitter::readDriveState()
 {

@@ -87,7 +87,7 @@ class CanDriveTwitter : public CanDevice
     /**
      * Returns received value from analog input.
      */
-    double readAnalogInput();
+    double readAnalogInputV();
 
     /**
      * Returns true if an error has been detected.

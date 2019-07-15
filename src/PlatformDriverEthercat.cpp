@@ -434,9 +434,9 @@ bool PlatformDriverEthercat::getNodeData(unsigned int drive_id,
     return false;
 }
 
-void PlatformDriverEthercat::getNodeAnalogInput(unsigned int drive_id, double* pdAnalogInput)
+void PlatformDriverEthercat::getNodeAnalogInputV(unsigned int drive_id, double* pdAnalogInputV)
 {
-    *pdAnalogInput = can_drives_[drive_id]->readAnalogInput();
+    *pdAnalogInputV = can_drives_[drive_id]->readAnalogInputV();
 }
 
 void PlatformDriverEthercat::getNodeFtsForceN(unsigned int fts_id,

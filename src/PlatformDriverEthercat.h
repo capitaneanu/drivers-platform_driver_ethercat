@@ -146,7 +146,7 @@ class PlatformDriverEthercat
                      double* pdCurrentAmp,
                      double* pdTorqueNm);
 
-    void getNodeAnalogInput(unsigned int drive_id, double* pdAnalogInput);
+    void getNodeAnalogInputV(unsigned int drive_id, double* pdAnalogInputV);
 
     void getNodeFtsForceN(unsigned int fts_id, double* fx, double* fy, double* fz);
 
