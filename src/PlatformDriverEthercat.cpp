@@ -16,6 +16,8 @@
 
 #include <base-logging/Logging.hpp>
 
+using namespace platform_driver_ethercat;
+
 PlatformDriverEthercat::PlatformDriverEthercat(unsigned int num_motors,
                                                unsigned int num_nodes,
                                                unsigned int can_dev_type,

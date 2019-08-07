@@ -3,6 +3,9 @@
 #include <string>
 #include <vector>
 
+namespace platform_driver_ethercat
+{
+
 enum MotorStatus
 {
     INACTIVE,
@@ -120,3 +123,5 @@ struct CanNodeType
     std::string sName;
     MotorType type;
 };
+
+}

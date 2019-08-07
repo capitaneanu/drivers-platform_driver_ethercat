@@ -4,6 +4,9 @@
 #include <string>
 #include <thread>
 
+namespace platform_driver_ethercat
+{
+
 class CanDevice;
 
 class CanOverEthercat
@@ -33,3 +36,5 @@ class CanOverEthercat
 
     void pdoCycle();
 };
+
+}

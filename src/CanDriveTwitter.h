@@ -3,7 +3,8 @@
 #include "CanDevice.h"
 #include "DriveParam.h"
 
-class CanOverEthercat;
+namespace platform_driver_ethercat
+{
 
 /**
  * Interface description for a drive type of class.
@@ -296,3 +297,4 @@ class CanDriveTwitter : public CanDevice
     bool checkSetPointAcknowledge();
 };
 
+}

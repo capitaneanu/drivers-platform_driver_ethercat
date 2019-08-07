@@ -1,5 +1,8 @@
 #pragma once
 
+namespace platform_driver_ethercat
+{
+
 class CanOverEthercat;
 
 class CanDevice
@@ -25,3 +28,5 @@ class CanDevice
     unsigned int _can_id;
     std::string _device_name;
 };
+
+}

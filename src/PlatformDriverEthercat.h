@@ -4,6 +4,9 @@
 #include <vector>
 #include "CanEnumsAndStructs.h"
 
+namespace platform_driver_ethercat
+{
+
 class CanDeviceAtiFts;
 class CanDriveTwitter;
 class CanOverEthercat;
@@ -166,3 +169,5 @@ class PlatformDriverEthercat
     unsigned int num_motors_;
     unsigned int num_nodes_;
 };
+
+}

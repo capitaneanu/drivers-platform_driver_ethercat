@@ -70,12 +70,13 @@
  *
  ****************************************************************/
 
-
-#ifndef DRIVEPARAM_INCLUDEDEF_H
-#define DRIVEPARAM_INCLUDEDEF_H
-
+#pragma once
 
 #include <math.h>
+
+namespace platform_driver_ethercat
+{
+
 const double dPI = 4*atan(1.0);
 
 /**
@@ -509,4 +510,5 @@ public:
         m_iHomingDigIn = HomingDigIn;
     }
 };
-#endif
+
+}

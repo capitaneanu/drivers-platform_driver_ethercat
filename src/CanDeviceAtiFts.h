@@ -4,7 +4,8 @@
 #include "CanDevice.h"
 #include "DriveParam.h"
 
-class CanOverEthercat;
+namespace platform_driver_ethercat
+{
 
 /**
  * Interface description for a drive type of class.
@@ -103,3 +104,5 @@ class CanDeviceAtiFts : public CanDevice
     Eigen::Vector3d _force_bias;
     Eigen::Vector3d _torque_bias;
 };
+
+}

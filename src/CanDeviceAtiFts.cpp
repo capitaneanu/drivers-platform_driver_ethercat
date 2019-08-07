@@ -4,6 +4,8 @@
 #include "CanOverEthercat.h"
 #include "base-logging/Logging.hpp"
 
+using namespace platform_driver_ethercat;
+
 CanDeviceAtiFts::CanDeviceAtiFts(CanOverEthercat* can_interface,
                                  unsigned int can_id,
                                  std::string device_name)

@@ -2,6 +2,8 @@
 #include "CanDevice.h"
 #include "ethercat.h"
 
+using namespace platform_driver_ethercat;
+
 const int EC_TIMEOUTMON = 500;
 
 int CanOverEthercat::_expected_wkc = 0;
