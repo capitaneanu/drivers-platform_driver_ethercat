@@ -74,6 +74,8 @@
 
 #include <math.h>
 
+#include "PlatformDriverEthercatTypes.h"
+
 namespace platform_driver_ethercat
 {
 
@@ -116,6 +118,27 @@ public:
     DriveParam()
     {
         m_bIsSteer = true; /// default value
+    }
+
+    DriveParam(DriveConfig config)
+    {
+        setParam(
+           config.iEncIncrPerRevMot,
+           config.dBeltRatio,
+           config.dGearRatio,
+           config.iSign,
+           config.dPosLimitLowIncr,
+           config.dPosLimitHighIncr,
+           config.dVelMaxEncIncrS,
+           config.dPtpVelDefaultIncrS,
+           config.dAccIncrS2,
+           config.dDecIncrS2,
+           config.bIsSteer,
+           config.dCurrentToTorque,
+           config.dCurrMax,
+           config.iEncOffsetIncr,
+           config.dAnalogFactor,
+           config.dNominalCurrent);
     }
 
     /**

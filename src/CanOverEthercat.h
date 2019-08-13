@@ -12,7 +12,7 @@ class CanDevice;
 class CanOverEthercat
 {
   public:
-    CanOverEthercat(const std::string device_name);
+    CanOverEthercat(const std::string interface_address, const unsigned int num_slaves);
     ~CanOverEthercat();
     bool init();
     void close();
@@ -25,14 +25,15 @@ class CanOverEthercat
     static bool sdoWrite(uint16_t slave, uint16_t idx, uint8_t sub, int fieldsize, int data);
 
   private:
-    char _io_map[4096];
-    std::string _device_name;
-    bool _is_initialized;
-    std::map<unsigned int, CanDevice*> _devices;
-    std::thread _ethercat_thread;
+    const std::string interface_address_;
+    const unsigned int num_slaves_;
+    char io_map_[4096];
+    bool is_initialized_;
+    std::map<unsigned int, CanDevice*> devices_;
+    std::thread ethercat_thread_;
 
-    static int _expected_wkc;
-    static volatile int _wkc;
+    static int expected_wkc_;
+    static volatile int wkc_;
 
     void pdoCycle();
 };

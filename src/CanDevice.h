@@ -8,7 +8,7 @@ class CanOverEthercat;
 class CanDevice
 {
   public:
-    CanDevice(CanOverEthercat* can_interface, unsigned int can_id, std::string device_name);
+    CanDevice(CanOverEthercat* can_interface, unsigned int slave_id, std::string device_name);
     virtual ~CanDevice() = 0;
 
     virtual bool configure() = 0;
@@ -20,13 +20,13 @@ class CanDevice
     virtual void setInputPdo(unsigned char* input_pdo) = 0;
     virtual void setOutputPdo(unsigned char* output_pdo) = 0;
 
-    unsigned int getCanId();
+    unsigned int getSlaveId();
     std::string getDeviceName();
 
   protected:
-    CanOverEthercat* _can_interface;
-    unsigned int _can_id;
-    std::string _device_name;
+    CanOverEthercat* can_interface_;
+    unsigned int slave_id_;
+    std::string device_name_;
 };
 
 }

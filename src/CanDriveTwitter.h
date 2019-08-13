@@ -15,7 +15,11 @@ class CanDriveTwitter : public CanDevice
     /**
      * The constructor
      */
-    CanDriveTwitter(CanOverEthercat* can_interface, unsigned int can_id, std::string device_name);
+    CanDriveTwitter(CanOverEthercat* can_interface,
+                    unsigned int slave_id,
+                    std::string device_name,
+                    DriveConfig drive_config,
+                    bool enabled);
 
     /**
      * The destructor
@@ -108,18 +112,7 @@ class CanDriveTwitter : public CanDevice
      */
     bool requestEmergencyStop();
 
-    /**
-     * Sets the drive parameters.
-     * @param driveParam is the object of the DriveParam class that contains the values of the drive
-     * parameters.
-     */
-    void setDriveParam(DriveParam drive_param);
-
-    /**
-     * Gets the drive parameters
-     * @return Pointer to the object of type DriveParam that is contained in the drive class.
-     */
-    DriveParam* getDriveParam();
+    bool isEnabled();
 
   private:
     enum class DriveObject
@@ -236,7 +229,8 @@ class CanDriveTwitter : public CanDevice
         ST_OPERATION_ENABLE,
         ST_QUICK_STOP_ACTIVE,
         ST_FAULT_REACTION_ACTIVE,
-        ST_FAULT
+        ST_FAULT,
+        ST_UNKNOWN
     };
 
     /**
@@ -272,9 +266,11 @@ class CanDriveTwitter : public CanDevice
         int16_t analog_input;
     } TxPdo;
 
-    DriveParam _drive_param;
-    TxPdo* _input;
-    RxPdo* _output;
+    DriveParam drive_param_;
+    bool enabled_;
+
+    TxPdo* input_;
+    RxPdo* output_;
 
     /**
      * Returns the state of the drive
@@ -296,5 +292,4 @@ class CanDriveTwitter : public CanDevice
      */
     bool checkSetPointAcknowledge();
 };
-
 }

@@ -6,11 +6,11 @@ using namespace platform_driver_ethercat;
 
 const int EC_TIMEOUTMON = 500;
 
-int CanOverEthercat::_expected_wkc = 0;
-volatile int CanOverEthercat::_wkc = 0;
+int CanOverEthercat::expected_wkc_ = 0;
+volatile int CanOverEthercat::wkc_ = 0;
 
-CanOverEthercat::CanOverEthercat(const std::string device_name)
-    : _device_name(device_name), _is_initialized(false)
+CanOverEthercat::CanOverEthercat(const std::string interface_address, const unsigned int num_slaves)
+    : interface_address_(interface_address), num_slaves_(num_slaves), is_initialized_(false)
 {
 }
 
@@ -20,32 +20,38 @@ bool CanOverEthercat::init()
 {
     if (isInit()) return true;
 
-    _is_initialized = false;
+    is_initialized_ = false;
 
     /* initialise SOEM, bind socket to ifname */
-    if (ec_init(_device_name.c_str()))
+    if (ec_init(interface_address_.c_str()))
     {
-        printf("ec_init on %s succeeded.\n", _device_name.c_str());
+        printf("ec_init on %s succeeded.\n", interface_address_.c_str());
         /* find and auto-config slaves */
         if (ec_config_init(FALSE) > 0)
         {
             printf("%d slaves found.\n", ec_slavecount);
 
-            if (_devices.size() > ec_slavecount)
+            if (num_slaves_ != ec_slavecount)
+            {
+                printf("Expected number of slaves is different from number of slaves found.\n");
+                return false;
+            }
+
+            if (devices_.size() > ec_slavecount)
             {
                 printf("Number of added devices (%d) is greater than number of slaves found.\n",
-                       _devices.size());
+                       devices_.size());
                 return false;
             }
 
             /* configure all devices via sdo */
-            for (auto device : _devices)
+            for (auto device : devices_)
             {
-                unsigned int can_id = device.first;
+                unsigned int slave_id = device.first;
 
-                if (can_id > ec_slavecount)
+                if (slave_id > ec_slavecount)
                 {
-                    printf("Slave id %d outside range.\n", can_id);
+                    printf("Slave id %d outside range.\n", slave_id);
                     return false;
                 }
 
@@ -60,24 +66,24 @@ bool CanOverEthercat::init()
                 ec_slave[i].CoEdetails &= ~ECT_COEDET_SDOCA;
             }
 
-            ec_config_map(&_io_map);
+            ec_config_map(&io_map_);
             ec_configdc();
 
             /* set pointers to pdo map for all devices */
-            for (auto device : _devices)
+            for (auto device : devices_)
             {
-                unsigned int can_id = device.first;
+                unsigned int slave_id = device.first;
 
-                device.second->setInputPdo(ec_slave[can_id].inputs);
-                device.second->setOutputPdo(ec_slave[can_id].outputs);
+                device.second->setInputPdo(ec_slave[slave_id].inputs);
+                device.second->setOutputPdo(ec_slave[slave_id].outputs);
             }
 
             printf("Slaves mapped, state to SAFE_OP.\n");
             /* wait for all slaves to reach SAFE_OP state */
             ec_statecheck(0, EC_STATE_SAFE_OP, EC_TIMEOUTSTATE * 4);
 
-            _expected_wkc = (ec_group[0].outputsWKC * 2) + ec_group[0].inputsWKC;
-            printf("Calculated workcounter %d\n", _expected_wkc);
+            expected_wkc_ = (ec_group[0].outputsWKC * 2) + ec_group[0].inputsWKC;
+            printf("Calculated workcounter %d\n", expected_wkc_);
 
             printf("Request operational state for all slaves\n");
             ec_slave[0].state = EC_STATE_OPERATIONAL;
@@ -101,15 +107,15 @@ bool CanOverEthercat::init()
 
                 /* create thread for pdo cycle */
                 // pthread_create(&_thread_handle, NULL, &pdoCycle, NULL);
-                _ethercat_thread = std::thread(&CanOverEthercat::pdoCycle, this);
+                ethercat_thread_ = std::thread(&CanOverEthercat::pdoCycle, this);
 
-                _is_initialized = true;
+                is_initialized_ = true;
                 return true;
             }
             else
             {
                 printf("Not all slaves reached operational state.\n");
-                _is_initialized = false;
+                is_initialized_ = false;
 
                 ec_readstate();
 
@@ -143,7 +149,7 @@ bool CanOverEthercat::init()
     }
     else
     {
-        printf("ec_init on %s not succeeded.\n", _device_name.c_str());
+        printf("ec_init on %s not succeeded.\n", interface_address_.c_str());
         return false;
     }
 }
@@ -161,14 +167,14 @@ void CanOverEthercat::close()
         // pthread_cancel(_thread_handle);
         // pthread_join(_thread_handle, NULL);
 
-        _is_initialized = false;
+        is_initialized_ = false;
     }
 
     printf("Close socket\n");
     ec_close();
 }
 
-bool CanOverEthercat::isInit() { return _is_initialized; }
+bool CanOverEthercat::isInit() { return is_initialized_; }
 
 bool CanOverEthercat::addDevice(CanDevice* device)
 {
@@ -178,7 +184,7 @@ bool CanOverEthercat::addDevice(CanDevice* device)
         return false;
     }
 
-    _devices.insert(std::make_pair(device->getCanId(), device));
+    devices_.insert(std::make_pair(device->getSlaveId(), device));
 
     return true;
 }
@@ -216,11 +222,11 @@ void CanOverEthercat::pdoCycle()
     while (1)
     {
         ec_send_processdata();
-        _wkc = ec_receive_processdata(EC_TIMEOUTRET);
+        wkc_ = ec_receive_processdata(EC_TIMEOUTRET);
 
         while (EcatError) printf("%s", ec_elist2string());
 
-        if ((_wkc < _expected_wkc) || ec_group[currentgroup].docheckstate)
+        if ((wkc_ < expected_wkc_) || ec_group[currentgroup].docheckstate)
         {
             /* one ore more slaves are not responding */
             ec_group[currentgroup].docheckstate = FALSE;
@@ -246,7 +252,7 @@ void CanOverEthercat::pdoCycle()
                     }
                     else if (ec_slave[slave].state > EC_STATE_NONE)
                     {
-                        //_devices[slave]->configure();
+                        // devices_[slave]->configure();
 
                         if (ec_reconfig_slave(slave, EC_TIMEOUTMON))
                         {

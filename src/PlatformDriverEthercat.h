@@ -2,7 +2,7 @@
 
 #include <string>
 #include <vector>
-#include "CanEnumsAndStructs.h"
+#include "PlatformDriverEthercatTypes.h"
 
 namespace platform_driver_ethercat
 {
@@ -22,11 +22,10 @@ class PlatformDriverEthercat
     /**
      * Default constructor.
      */
-    PlatformDriverEthercat(unsigned int num_motors,
-                           unsigned int num_nodes,
-                           unsigned int can_dev_type,
-                           std::string can_dev_addr,
-                           unsigned int watchdog);
+    PlatformDriverEthercat(std::string can_address,
+                           unsigned int num_slaves,
+                           DriveSlaveMapping drive_mapping,
+                           FtsSlaveMapping fts_mapping);
 
     /**
      * Default destructor.
@@ -34,51 +33,38 @@ class PlatformDriverEthercat
     ~PlatformDriverEthercat();
 
     /**
-     * Initializes all CAN nodes of the platform and performs homing procedure of the steered
-     * motors. Note: The homing routine is hardware-dependent. This method is now adapted to ExoTer
-     * rover configuration. Re-adapt this before using in different platforms.
+     * Initializes the ethercat interface and starts up the drives.
      * @return True if initialization is successful, false otherwise.
      */
-    bool initPltf(GearMotorParamType wheel_drive_params,
-                  GearMotorParamType steer_drive_params,
-                  GearMotorParamType walk_drive_params,
-                  GearMotorParamType pan_drive_params,
-                  GearMotorParamType tilt_drive_params,
-                  GearMotorParamType arm_drive_params,
-                  PltfCanParams can_params);
+    bool initPlatform();
 
     /**
-     * Sets CAN node and interface configuration and motor parameters for each drive.
-     * (should be adapted to use RoCK component properties)
+     * Starts up the platform.
+     * Enables the motors
+     * @return True if all drive are properly started.
      */
-    bool readConfiguration(GearMotorParamType wheel_drive_params,
-                           GearMotorParamType steer_drive_params,
-                           GearMotorParamType walk_drive_params,
-                           GearMotorParamType pan_drive_params,
-                           GearMotorParamType tilt_drive_params,
-                           GearMotorParamType arm_drive_params,
-                           PltfCanParams can_params);
+    bool startupPlatform();
+
+    /**
+     * Starts up the specific drive.
+     * Enables the motor, check the status.
+     * @return True if the drive is properly started.
+     */
+    bool startupDrive(unsigned int drive_id);
 
     /**
      * Shuts down the platform.
      * Disables motors, enables brake and disconnects.
      * @return True if all drives are properly shut down.
      */
-    bool shutdownPltf();
+    bool shutdownPlatform();
 
     /**
      * Shuts down the specific Node.
      * Disables motor, enables brake and disconnects.
      * @return True if the drive is properly shut down.
      */
-    bool shutdownNode(unsigned int drive_id);
-
-    /**
-     * Starts the specific Node.
-     * Enables the motor, check the status.
-     * @return True if the drive is properly started.
-     */
-    bool startNode(unsigned int drive_id);
+    bool shutdownDrive(unsigned int drive_id);
 
     /**
      * Reinitializes the nodes on the bus.
@@ -86,7 +72,7 @@ class PlatformDriverEthercat
      * drives.
      * @return True if re-initialization is successful, false otherwise.
      */
-    bool resetPltf();
+    bool resetPlatform();
 
     /**
      * Reinitializes the specific node on the bus.
@@ -94,80 +80,56 @@ class PlatformDriverEthercat
      * drives.
      * @return True if re-initialization is successful, false otherwise.
      */
-    bool resetNode(unsigned int drive_id);
+    bool resetDrive(unsigned int drive_id);
 
     /**
-     * Sends position (and velocity) command for specific can node (PTP Motion).
-     * Node must be in position control mode
-     * @param drive_id selects the can node
-     * @param dPosGearRad position command in radians
-     * @param dVelGearRadS velocity command in radian per second, not used in ethercat driver
+     * Sends position command for specific can node (PTP Motion).
      */
-    void nodePositionCommandRad(unsigned int drive_id, double dPosRad, double dVelRadS = 0);
+    void commandDrivePositionRad(unsigned int drive_id, double position_rad);
 
     /**
-     * Sends velocity command for specific can node.
-     * Node must be in velocity control mode
-     * @param drive_id selects the can node
-     * @param dVelGearRadS velocity command in radian per second
+     * Sends velocity command for specific drive.
      */
-    void nodeVelocityCommandRadS(unsigned int drive_id, double dVelRadS);
+    void commandDriveVelocityRadSec(unsigned int drive_id, double velocity_rad_sec);
 
     /**
-     * Sends torque command for specific can node.
-     * @param drive_id selects the can node
-     * @param dTorqueNM motor-torque in Nm
+     * Sends torque command for specific drive.
      */
-    void nodeTorqueCommandNm(unsigned int drive_id, double dTorqueNm);
+    void commandDriveTorqueNm(unsigned int drive_id, double torque_nm);
 
     /**
-     * Gets the position and velocity of a given node.
-     * @param drive_id selects the can node
-     * @param pdAngleGearRad The value (in radians) of the current position of the motor is stored
-     * in this pointer.
+     * Gets the position and velocity of a given drive.
      */
-    void getNodePositionRad(unsigned int drive_id, double* pdPositionRad);
+    void readDrivePositionRad(unsigned int drive_id, double& position_rad);
 
     /**
      * Gets the velocity of a given node.
-     * @param drive_id selects the can node
-     * @param pdVelGearRadS The value (in radians/s) of the current velocity of the motor is stored
-     * in this pointer.
      */
-    void getNodeVelocityRadS(unsigned int drive_id, double* pdVelocityRadS);
+    void readDriveVelocityRadSec(unsigned int drive_id, double& velocity_rad_sec);
 
     /**
      * Gets the motor torque (from active current) of a given node.
-     * @param drive_id selects the can node
-     * @param pdTorqueNm The value (in Nm) of the current motor torque is stored in this pointer.
      */
-    void getNodeTorqueNm(unsigned int drive_id, double* pdTorqueNm);
+    void readDriveTorqueNm(unsigned int drive_id, double& torque_nm);
 
-    bool getNodeData(unsigned int drive_id,
-                     double* pdAngleGearRad,
-                     double* pdVelGearRadS,
-                     double* pdCurrentAmp,
-                     double* pdTorqueNm);
+    bool readDriveData(unsigned int drive_id,
+                       double& position_rad,
+                       double& velocity_rad_sec,
+                       double& current_amp,
+                       double& torque_nm);
 
-    void getNodeAnalogInputV(unsigned int drive_id, double* pdAnalogInputV);
+    void readDriveAnalogInputV(unsigned int drive_id, double& analog_input_v);
 
-    void getNodeFtsForceN(unsigned int fts_id, double* fx, double* fy, double* fz);
+    void readFtsForceN(unsigned int fts_id, double& fx, double& fy, double& fz);
 
-    void getNodeFtsTorqueNm(unsigned int fts_id, double* tx, double* ty, double* tz);
+    void readFtsTorqueNm(unsigned int fts_id, double& tx, double& ty, double& tz);
 
-  protected:
-    // Address of the can device interface in the system
-    std::string can_address_;
-    // CAN interface device class object (PeakSysUSB)
+  private:
+    bool applyConfiguration(DriveSlaveMapping drive_mapping,
+                            FtsSlaveMapping fts_mapping);
+
     CanOverEthercat* can_interface_;
-    // Motor controllers. Pointer to each motor's CanDrive-Itf
     std::vector<CanDriveTwitter*> can_drives_;
     std::vector<CanDeviceAtiFts*> can_fts_;
-
-    // Array of CanNodeTypes. Keeps information of all Node IDs and high level description
-    PltfCanParams can_parameters_;
-    unsigned int num_motors_;
-    unsigned int num_nodes_;
 };
-
 }

@@ -7,46 +7,46 @@
 using namespace platform_driver_ethercat;
 
 CanDeviceAtiFts::CanDeviceAtiFts(CanOverEthercat* can_interface,
-                                 unsigned int can_id,
+                                 unsigned int slave_id,
                                  std::string device_name)
-    : CanDevice(can_interface, can_id, device_name),
-      _input(NULL),
-      _output(NULL),
-      _counts_per_force(1),
-      _counts_per_torque(1),
-      _force_bias(0, 0, 0),
-      _torque_bias(0, 0, 0)
+    : CanDevice(can_interface, slave_id, device_name),
+      input_(NULL),
+      output_(NULL),
+      counts_per_force_(1),
+      counts_per_torque_(1),
+      force_bias_(0, 0, 0),
+      torque_bias_(0, 0, 0)
 
 {
     if (device_name == "FTS_FL")
     {
-        _force_bias = Eigen::Vector3d(0, 0, 0);
-        _torque_bias = Eigen::Vector3d(0, 0, 0);
+        force_bias_ = Eigen::Vector3d(0, 0, 0);
+        torque_bias_ = Eigen::Vector3d(0, 0, 0);
     }
     else if (device_name == "FTS_FR")
     {
-        _force_bias = Eigen::Vector3d(0, 0, 0);
-        _torque_bias = Eigen::Vector3d(0, 0, 0);
+        force_bias_ = Eigen::Vector3d(0, 0, 0);
+        torque_bias_ = Eigen::Vector3d(0, 0, 0);
     }
     else if (device_name == "FTS_CL")
     {
-        _force_bias = Eigen::Vector3d(0, 0, 0);
-        _torque_bias = Eigen::Vector3d(0, 0, 0);
+        force_bias_ = Eigen::Vector3d(0, 0, 0);
+        torque_bias_ = Eigen::Vector3d(0, 0, 0);
     }
     else if (device_name == "FTS_CR")
     {
-        _force_bias = Eigen::Vector3d(0, 0, 0);
-        _torque_bias = Eigen::Vector3d(0, 0, 0);
+        force_bias_ = Eigen::Vector3d(0, 0, 0);
+        torque_bias_ = Eigen::Vector3d(0, 0, 0);
     }
     else if (device_name == "FTS_BL")
     {
-        _force_bias = Eigen::Vector3d(0, 0, 0);
-        _torque_bias = Eigen::Vector3d(0, 0, 0);
+        force_bias_ = Eigen::Vector3d(0, 0, 0);
+        torque_bias_ = Eigen::Vector3d(0, 0, 0);
     }
     else if (device_name == "FTS_BR")
     {
-        _force_bias = Eigen::Vector3d(0, 0, 0);
-        _torque_bias = Eigen::Vector3d(0, 0, 0);
+        force_bias_ = Eigen::Vector3d(0, 0, 0);
+        torque_bias_ = Eigen::Vector3d(0, 0, 0);
     }
 }
 
@@ -54,7 +54,7 @@ CanDeviceAtiFts::~CanDeviceAtiFts() {}
 
 bool CanDeviceAtiFts::configure()
 {
-    LOG_DEBUG_S << "Configuring device " << _device_name << " ...";
+    LOG_DEBUG_S << "Configuring device " << device_name_ << " ...";
 
     typedef struct SdoWrite
     {
@@ -72,44 +72,44 @@ bool CanDeviceAtiFts::configure()
 
     for (auto sdo_write : sdo_writes)
     {
-        success &= _can_interface->sdoWrite(
-            _can_id, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
+        success &= can_interface_->sdoWrite(
+            slave_id_, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
     }
 
     int force_unit;
     int torque_unit;
 
-    success &= _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x29, &force_unit);
-    success &= _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x2a, &torque_unit);
+    success &= can_interface_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x29, &force_unit);
+    success &= can_interface_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x2a, &torque_unit);
 
-    LOG_DEBUG_S << "Force unit of sensor " << _device_name << " is " << force_unit;
-    LOG_DEBUG_S << "Torque unit of sensor " << _device_name << " is " << torque_unit;
+    LOG_DEBUG_S << "Force unit of sensor " << device_name_ << " is " << force_unit;
+    LOG_DEBUG_S << "Torque unit of sensor " << device_name_ << " is " << torque_unit;
 
     success &=
-        _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x31, &_counts_per_force);
+        can_interface_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x31, &counts_per_force_);
     success &=
-        _can_interface->sdoRead(_can_id, DictionaryObject::CALIBRATION, 0x32, &_counts_per_torque);
+        can_interface_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x32, &counts_per_torque_);
 
     if (success)
     {
-        LOG_INFO_S << "Device " << _device_name << " configured";
+        LOG_INFO_S << "Device " << device_name_ << " configured";
         return true;
     }
     else
     {
-        LOG_ERROR_S << "Failed to configure device " << _device_name;
+        LOG_ERROR_S << "Failed to configure device " << device_name_;
         return false;
     }
 }
 
-void CanDeviceAtiFts::setInputPdo(unsigned char* input_pdo) { _input = (TxPdo*)input_pdo; }
+void CanDeviceAtiFts::setInputPdo(unsigned char* input_pdo) { input_ = (TxPdo*)input_pdo; }
 
 void CanDeviceAtiFts::setOutputPdo(unsigned char* output_pdo)
 {
-    _output = (RxPdo*)output_pdo;
+    output_ = (RxPdo*)output_pdo;
 
-    _output->control_1 = 0x00000000;
-    _output->control_2 = 0x00000000;
+    output_->control_1 = 0x00000000;
+    output_->control_2 = 0x00000000;
 }
 
 bool CanDeviceAtiFts::startup() { return true; }
@@ -120,24 +120,24 @@ bool CanDeviceAtiFts::reset() { return shutdown() && startup(); }
 
 Eigen::Vector3d CanDeviceAtiFts::readForceN()
 {
-    double fx = _input->fx * 1.0 / _counts_per_force;
-    double fy = _input->fy * 1.0 / _counts_per_force;
-    double fz = _input->fz * 1.0 / _counts_per_force;
+    double fx = input_->fx * 1.0 / counts_per_force_;
+    double fy = input_->fy * 1.0 / counts_per_force_;
+    double fz = input_->fz * 1.0 / counts_per_force_;
 
     Eigen::Vector3d force = Eigen::Vector3d(fx, fy, fz);
-    force -= _force_bias;
+    force -= force_bias_;
 
     return force;
 }
 
 Eigen::Vector3d CanDeviceAtiFts::readTorqueNm()
 {
-    double tx = _input->tx * 1.0 / _counts_per_torque;
-    double ty = _input->ty * 1.0 / _counts_per_torque;
-    double tz = _input->tz * 1.0 / _counts_per_torque;
+    double tx = input_->tx * 1.0 / counts_per_torque_;
+    double ty = input_->ty * 1.0 / counts_per_torque_;
+    double tz = input_->tz * 1.0 / counts_per_torque_;
 
     Eigen::Vector3d torque = Eigen::Vector3d(tx, ty, tz);
-    torque -= _torque_bias;
+    torque -= torque_bias_;
 
     return torque;
 }

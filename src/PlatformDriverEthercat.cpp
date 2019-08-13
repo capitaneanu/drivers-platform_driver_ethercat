@@ -18,16 +18,13 @@
 
 using namespace platform_driver_ethercat;
 
-PlatformDriverEthercat::PlatformDriverEthercat(unsigned int num_motors,
-                                               unsigned int num_nodes,
-                                               unsigned int can_dev_type,
-                                               std::string can_dev_addr,
-                                               unsigned int watchdog)
+PlatformDriverEthercat::PlatformDriverEthercat(std::string dev_address,
+                                               unsigned int num_slaves,
+                                               DriveSlaveMapping drive_mapping,
+                                               FtsSlaveMapping fts_mapping)
+    : can_interface_(new CanOverEthercat(dev_address, num_slaves))
 {
-    num_motors_ = num_motors;
-    num_nodes_ = num_nodes;
-    can_address_ = can_dev_addr;
-    can_interface_ = new CanOverEthercat(can_address_);
+    applyConfiguration(drive_mapping, fts_mapping);
 }
 
 PlatformDriverEthercat::~PlatformDriverEthercat()
@@ -44,196 +41,36 @@ PlatformDriverEthercat::~PlatformDriverEthercat()
             delete drive;
         }
     }
+
+    for (auto fts : can_fts_)
+    {
+        if (fts != NULL)
+        {
+            delete fts;
+        }
+    }
 }
 
-bool PlatformDriverEthercat::readConfiguration(GearMotorParamType wheel_drive_params,
-                                               GearMotorParamType steer_drive_params,
-                                               GearMotorParamType walk_drive_params,
-                                               GearMotorParamType pan_drive_params,
-                                               GearMotorParamType tilt_drive_params,
-                                               GearMotorParamType arm_drive_params,
-                                               PltfCanParams can_params)
+bool PlatformDriverEthercat::applyConfiguration(DriveSlaveMapping drive_mapping,
+                                                FtsSlaveMapping fts_mapping)
 {
-    if (can_params.CanId.size() != num_nodes_    //
-        || can_params.Name.size() != num_nodes_  //
-        || can_params.Type.size() != num_nodes_  //
-        || can_params.Active.size() != num_nodes_)
+    for (auto drive_params : drive_mapping)
     {
-        LOG_ERROR_S << __PRETTY_FUNCTION__
-                    << ": The size of the can parameter vectors (CanId, Name, Type, Active) do not "
-                       "match the stated number of nodes"
-                    << std::endl;
-        return false;
+        CanDriveTwitter* drive = new CanDriveTwitter(can_interface_,
+                                                     drive_params.slave_id,
+                                                     drive_params.name,
+                                                     drive_params.config,
+                                                     drive_params.enabled);
+        can_drives_.push_back(drive);
+        can_interface_->addDevice(drive);
     }
 
-    can_parameters_ = can_params;
-
-    for (unsigned int i = 0; i < num_nodes_; i++)
+    for (auto fts_params : fts_mapping)
     {
-        // set Motor parameters depending on the type of motor
-        if (can_parameters_.Type[i] == WHEEL_DRIVE)
-        {
-            CanDriveTwitter* drive = new CanDriveTwitter(
-                can_interface_, can_parameters_.CanId[i], can_parameters_.Name[i]);
-
-            drive->getDriveParam()->setParam(wheel_drive_params.iEncIncrPerRevMot,
-                                             wheel_drive_params.dBeltRatio,
-                                             wheel_drive_params.dGearRatio,
-                                             wheel_drive_params.iSign,
-                                             wheel_drive_params.dPosLimitLowIncr,
-                                             wheel_drive_params.dPosLimitHighIncr,
-                                             wheel_drive_params.dVelMaxEncIncrS,
-                                             wheel_drive_params.dPtpVelDefaultIncrS,
-                                             wheel_drive_params.dAccIncrS2,
-                                             wheel_drive_params.dDecIncrS2,
-                                             wheel_drive_params.bIsSteer,
-                                             wheel_drive_params.dCurrentToTorque,
-                                             wheel_drive_params.dCurrMax,
-                                             wheel_drive_params.iEncOffsetIncr,
-                                             wheel_drive_params.dAnalogFactor,
-                                             wheel_drive_params.dNominalCurrent);
-
-            can_drives_.push_back(drive);
-            can_interface_->addDevice(drive);
-        }
-        else if (can_parameters_.Type[i] == WHEEL_STEER)
-        {
-            CanDriveTwitter* drive = new CanDriveTwitter(
-                can_interface_, can_parameters_.CanId[i], can_parameters_.Name[i]);
-
-            drive->getDriveParam()->setParam(steer_drive_params.iEncIncrPerRevMot,
-                                             steer_drive_params.dBeltRatio,
-                                             steer_drive_params.dGearRatio,
-                                             steer_drive_params.iSign,
-                                             steer_drive_params.dPosLimitLowIncr,
-                                             steer_drive_params.dPosLimitHighIncr,
-                                             steer_drive_params.dVelMaxEncIncrS,
-                                             steer_drive_params.dPtpVelDefaultIncrS,
-                                             steer_drive_params.dAccIncrS2,
-                                             steer_drive_params.dDecIncrS2,
-                                             steer_drive_params.bIsSteer,
-                                             steer_drive_params.dCurrentToTorque,
-                                             steer_drive_params.dCurrMax,
-                                             steer_drive_params.iEncOffsetIncr,
-                                             steer_drive_params.dAnalogFactor,
-                                             steer_drive_params.dNominalCurrent);
-
-            can_drives_.push_back(drive);
-            can_interface_->addDevice(drive);
-        }
-        else if (can_parameters_.Type[i] == WHEEL_WALK)
-        {
-            CanDriveTwitter* drive = new CanDriveTwitter(
-                can_interface_, can_parameters_.CanId[i], can_parameters_.Name[i]);
-
-            drive->getDriveParam()->setParam(walk_drive_params.iEncIncrPerRevMot,
-                                             walk_drive_params.dBeltRatio,
-                                             walk_drive_params.dGearRatio,
-                                             walk_drive_params.iSign,
-                                             walk_drive_params.dPosLimitLowIncr,
-                                             walk_drive_params.dPosLimitHighIncr,
-                                             walk_drive_params.dVelMaxEncIncrS,
-                                             walk_drive_params.dPtpVelDefaultIncrS,
-                                             walk_drive_params.dAccIncrS2,
-                                             walk_drive_params.dDecIncrS2,
-                                             walk_drive_params.bIsSteer,
-                                             walk_drive_params.dCurrentToTorque,
-                                             walk_drive_params.dCurrMax,
-                                             walk_drive_params.iEncOffsetIncr,
-                                             walk_drive_params.dAnalogFactor,
-                                             walk_drive_params.dNominalCurrent);
-
-            can_drives_.push_back(drive);
-            can_interface_->addDevice(drive);
-        }
-        else if (can_parameters_.Type[i] == MANIP_JOINT)
-        {
-            CanDriveTwitter* drive = new CanDriveTwitter(
-                can_interface_, can_parameters_.CanId[i], can_parameters_.Name[i]);
-
-            drive->getDriveParam()->setParam(arm_drive_params.iEncIncrPerRevMot,
-                                             arm_drive_params.dBeltRatio,
-                                             arm_drive_params.dGearRatio,
-                                             arm_drive_params.iSign,
-                                             arm_drive_params.dPosLimitLowIncr,
-                                             arm_drive_params.dPosLimitHighIncr,
-                                             arm_drive_params.dVelMaxEncIncrS,
-                                             arm_drive_params.dPtpVelDefaultIncrS,
-                                             arm_drive_params.dAccIncrS2,
-                                             arm_drive_params.dDecIncrS2,
-                                             arm_drive_params.bIsSteer,
-                                             arm_drive_params.dCurrentToTorque,
-                                             arm_drive_params.dCurrMax,
-                                             arm_drive_params.iEncOffsetIncr,
-                                             arm_drive_params.dAnalogFactor,
-                                             arm_drive_params.dNominalCurrent);
-
-            can_drives_.push_back(drive);
-            can_interface_->addDevice(drive);
-        }
-        else if (can_parameters_.Type[i] == MAST_PAN)
-        {
-            CanDriveTwitter* drive = new CanDriveTwitter(
-                can_interface_, can_parameters_.CanId[i], can_parameters_.Name[i]);
-
-            drive->getDriveParam()->setParam(pan_drive_params.iEncIncrPerRevMot,
-                                             pan_drive_params.dBeltRatio,
-                                             pan_drive_params.dGearRatio,
-                                             pan_drive_params.iSign,
-                                             pan_drive_params.dPosLimitLowIncr,
-                                             pan_drive_params.dPosLimitHighIncr,
-                                             pan_drive_params.dVelMaxEncIncrS,
-                                             pan_drive_params.dPtpVelDefaultIncrS,
-                                             pan_drive_params.dAccIncrS2,
-                                             pan_drive_params.dDecIncrS2,
-                                             pan_drive_params.bIsSteer,
-                                             pan_drive_params.dCurrentToTorque,
-                                             pan_drive_params.dCurrMax,
-                                             pan_drive_params.iEncOffsetIncr,
-                                             pan_drive_params.dAnalogFactor,
-                                             pan_drive_params.dNominalCurrent);
-
-            can_drives_.push_back(drive);
-            can_interface_->addDevice(drive);
-        }
-        else if (can_parameters_.Type[i] == MAST_TILT)
-        {
-            CanDriveTwitter* drive = new CanDriveTwitter(
-                can_interface_, can_parameters_.CanId[i], can_parameters_.Name[i]);
-
-            drive->getDriveParam()->setParam(tilt_drive_params.iEncIncrPerRevMot,
-                                             tilt_drive_params.dBeltRatio,
-                                             tilt_drive_params.dGearRatio,
-                                             tilt_drive_params.iSign,
-                                             tilt_drive_params.dPosLimitLowIncr,
-                                             tilt_drive_params.dPosLimitHighIncr,
-                                             tilt_drive_params.dVelMaxEncIncrS,
-                                             tilt_drive_params.dPtpVelDefaultIncrS,
-                                             tilt_drive_params.dAccIncrS2,
-                                             tilt_drive_params.dDecIncrS2,
-                                             tilt_drive_params.bIsSteer,
-                                             tilt_drive_params.dCurrentToTorque,
-                                             tilt_drive_params.dCurrMax,
-                                             tilt_drive_params.iEncOffsetIncr,
-                                             tilt_drive_params.dAnalogFactor,
-                                             tilt_drive_params.dNominalCurrent);
-
-            can_drives_.push_back(drive);
-            can_interface_->addDevice(drive);
-        }
-        else if (can_parameters_.Type[i] == FT_SENSOR)
-        {
-            CanDeviceAtiFts* device = new CanDeviceAtiFts(
-                can_interface_, can_parameters_.CanId[i], can_parameters_.Name[i]);
-            can_fts_.push_back(device);
-            can_interface_->addDevice(device);
-        }
-        else
-        {
-            LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Unknown type " << can_parameters_.Type[i]
-                        << " of motor " << can_parameters_.Name[i];
-            return false;
-        }
+        CanDeviceAtiFts* device =
+            new CanDeviceAtiFts(can_interface_, fts_params.slave_id, fts_params.name);
+        can_fts_.push_back(device);
+        can_interface_->addDevice(device);
     }
 
     LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Success" << std::endl;
@@ -241,27 +78,8 @@ bool PlatformDriverEthercat::readConfiguration(GearMotorParamType wheel_drive_pa
     return true;
 }
 
-bool PlatformDriverEthercat::initPltf(GearMotorParamType wheel_drive_params,
-                                      GearMotorParamType steer_drive_params,
-                                      GearMotorParamType walk_drive_params,
-                                      GearMotorParamType pan_drive_params,
-                                      GearMotorParamType tilt_drive_params,
-                                      GearMotorParamType arm_drive_params,
-                                      PltfCanParams can_params)
+bool PlatformDriverEthercat::initPlatform()
 {
-    //* Platform configuration. CAN interface and CAN nodes setup.
-    if (!readConfiguration(wheel_drive_params,
-                           steer_drive_params,
-                           walk_drive_params,
-                           pan_drive_params,
-                           tilt_drive_params,
-                           arm_drive_params,
-                           can_params))
-    {
-        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Error in readConfiguration call";
-        return false;
-    }
-
     LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Initializing EtherCAT interface";
 
     if (!can_interface_->init())
@@ -270,10 +88,22 @@ bool PlatformDriverEthercat::initPltf(GearMotorParamType wheel_drive_params,
         return false;
     }
 
+    if (!startupPlatform())
+    {
+        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not start up drives";
+        return false;
+    }
+
+    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Platform init success";
+    return true;
+}
+
+bool PlatformDriverEthercat::startupPlatform()
+{
     // Start all drives in groups of 6
     unsigned int i = 0;
 
-    while (i < num_motors_)
+    while (i < can_drives_.size())
     {
         std::vector<std::tuple<CanDriveTwitter*, std::future<bool>>> future_tuples;
 
@@ -281,9 +111,10 @@ bool PlatformDriverEthercat::initPltf(GearMotorParamType wheel_drive_params,
 
         while (j < 6)
         {
-            if (can_params.Active[i])
+            CanDriveTwitter* drive = can_drives_[i];
+
+            if (drive->isEnabled())
             {
-                CanDriveTwitter* drive = can_drives_[i];
                 LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Starting drive " << drive->getDeviceName();
 
                 auto future = std::async(std::launch::async, &CanDriveTwitter::startup, drive);
@@ -296,7 +127,7 @@ bool PlatformDriverEthercat::initPltf(GearMotorParamType wheel_drive_params,
 
             i++;
 
-            if (i >= num_motors_)
+            if (i >= can_drives_.size())
             {
                 break;
             }
@@ -321,11 +152,18 @@ bool PlatformDriverEthercat::initPltf(GearMotorParamType wheel_drive_params,
         }
     }
 
-    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Platform init success";
     return true;
 }
 
-bool PlatformDriverEthercat::shutdownPltf()
+bool PlatformDriverEthercat::startupDrive(unsigned int drive_id)
+{
+    bool bRet = true;
+    // start up the motor
+    bRet &= can_drives_[drive_id]->startup();
+    return bRet;
+}
+
+bool PlatformDriverEthercat::shutdownPlatform()
 {
     bool bRet = true;
     // shut down all motors
@@ -336,7 +174,7 @@ bool PlatformDriverEthercat::shutdownPltf()
     return bRet;
 }
 
-bool PlatformDriverEthercat::shutdownNode(unsigned int drive_id)
+bool PlatformDriverEthercat::shutdownDrive(unsigned int drive_id)
 {
     bool bRet = true;
     // shut down the motor
@@ -344,15 +182,7 @@ bool PlatformDriverEthercat::shutdownNode(unsigned int drive_id)
     return bRet;
 }
 
-bool PlatformDriverEthercat::startNode(unsigned int drive_id)
-{
-    bool bRet = true;
-    // start up the motor
-    bRet &= can_drives_[drive_id]->startup();
-    return bRet;
-}
-
-bool PlatformDriverEthercat::resetPltf()
+bool PlatformDriverEthercat::resetPlatform()
 {
     bool bRetMotor = true;
     bool bRet = true;
@@ -372,7 +202,7 @@ bool PlatformDriverEthercat::resetPltf()
     return bRet;
 }
 
-bool PlatformDriverEthercat::resetNode(unsigned int drive_id)
+bool PlatformDriverEthercat::resetDrive(unsigned int drive_id)
 {
     auto drive = can_drives_[drive_id];
     bool bRet = drive->reset();
@@ -385,50 +215,50 @@ bool PlatformDriverEthercat::resetNode(unsigned int drive_id)
     return bRet;
 }
 
-void PlatformDriverEthercat::nodePositionCommandRad(unsigned int drive_id,
-                                                    double dPosGearRad,
-                                                    double dVelGearRadS)
+void PlatformDriverEthercat::commandDrivePositionRad(unsigned int drive_id, double position_rad)
 {
-    can_drives_[drive_id]->commandPositionRad(dPosGearRad);
+    can_drives_[drive_id]->commandPositionRad(position_rad);
 }
 
-void PlatformDriverEthercat::nodeVelocityCommandRadS(unsigned int drive_id, double dVelGearRadS)
+void PlatformDriverEthercat::commandDriveVelocityRadSec(unsigned int drive_id,
+                                                        double velocity_rad_sec)
 {
-    can_drives_[drive_id]->commandVelocityRadSec(dVelGearRadS);
+    can_drives_[drive_id]->commandVelocityRadSec(velocity_rad_sec);
 }
 
-void PlatformDriverEthercat::nodeTorqueCommandNm(unsigned int drive_id, double dTorqueNm)
+void PlatformDriverEthercat::commandDriveTorqueNm(unsigned int drive_id, double torque_nm)
 {
-    can_drives_[drive_id]->commandTorqueNm(dTorqueNm);
+    can_drives_[drive_id]->commandTorqueNm(torque_nm);
 }
 
-void PlatformDriverEthercat::getNodePositionRad(unsigned int drive_id, double* pdAngleGearRad)
+void PlatformDriverEthercat::readDrivePositionRad(unsigned int drive_id, double& position_rad)
 {
-    *pdAngleGearRad = can_drives_[drive_id]->readPositionRad();
+    position_rad = can_drives_[drive_id]->readPositionRad();
 }
 
-void PlatformDriverEthercat::getNodeVelocityRadS(unsigned int drive_id, double* pdVelocityRadS)
+void PlatformDriverEthercat::readDriveVelocityRadSec(unsigned int drive_id,
+                                                     double& velocity_rad_sec)
 {
-    *pdVelocityRadS = can_drives_[drive_id]->readVelocityRadSec();
+    velocity_rad_sec = can_drives_[drive_id]->readVelocityRadSec();
 }
 
-void PlatformDriverEthercat::getNodeTorqueNm(unsigned int drive_id, double* pdTorqueNm)
+void PlatformDriverEthercat::readDriveTorqueNm(unsigned int drive_id, double& torque_nm)
 {
-    *pdTorqueNm = can_drives_[drive_id]->readTorqueNm();
+    torque_nm = can_drives_[drive_id]->readTorqueNm();
 }
 
-bool PlatformDriverEthercat::getNodeData(unsigned int drive_id,
-                                         double* pdAngleGearRad,
-                                         double* pdVelGearRadS,
-                                         double* pdCurrentAmp,
-                                         double* pdTorqueNm)
+bool PlatformDriverEthercat::readDriveData(unsigned int drive_id,
+                                           double& position_rad,
+                                           double& velocity_rad_sec,
+                                           double& current_amp,
+                                           double& torque_nm)
 {
     if (!can_drives_[drive_id]->isError())
     {
-        *pdAngleGearRad = can_drives_[drive_id]->readPositionRad();
-        *pdVelGearRadS = can_drives_[drive_id]->readVelocityRadSec();
-        // TODO: add current output
-        *pdTorqueNm = can_drives_[drive_id]->readTorqueNm();
+        position_rad = can_drives_[drive_id]->readPositionRad();
+        velocity_rad_sec = can_drives_[drive_id]->readVelocityRadSec();
+        // TODO: Read out current
+        torque_nm = can_drives_[drive_id]->readTorqueNm();
 
         return true;
     }
@@ -436,31 +266,28 @@ bool PlatformDriverEthercat::getNodeData(unsigned int drive_id,
     return false;
 }
 
-void PlatformDriverEthercat::getNodeAnalogInputV(unsigned int drive_id, double* pdAnalogInputV)
+void PlatformDriverEthercat::readDriveAnalogInputV(unsigned int drive_id, double& analog_input_v)
 {
-    *pdAnalogInputV = can_drives_[drive_id]->readAnalogInputV();
+    analog_input_v = can_drives_[drive_id]->readAnalogInputV();
 }
 
-void PlatformDriverEthercat::getNodeFtsForceN(unsigned int fts_id,
-                                              double* fx,
-                                              double* fy,
-                                              double* fz)
+void PlatformDriverEthercat::readFtsForceN(unsigned int fts_id, double& fx, double& fy, double& fz)
 {
     Eigen::Vector3d force = can_fts_[fts_id]->readForceN();
 
-    *fx = force[0];
-    *fy = force[1];
-    *fz = force[2];
+    fx = force[0];
+    fy = force[1];
+    fz = force[2];
 }
 
-void PlatformDriverEthercat::getNodeFtsTorqueNm(unsigned int fts_id,
-                                                double* tx,
-                                                double* ty,
-                                                double* tz)
+void PlatformDriverEthercat::readFtsTorqueNm(unsigned int fts_id,
+                                             double& tx,
+                                             double& ty,
+                                             double& tz)
 {
     Eigen::Vector3d torque = can_fts_[fts_id]->readTorqueNm();
 
-    *tx = torque[0];
-    *ty = torque[1];
-    *tz = torque[2];
+    tx = torque[0];
+    ty = torque[1];
+    tz = torque[2];
 }

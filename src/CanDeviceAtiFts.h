@@ -16,7 +16,7 @@ class CanDeviceAtiFts : public CanDevice
     /**
      * The constructor
      */
-    CanDeviceAtiFts(CanOverEthercat* can_interface, unsigned int can_id, std::string device_name);
+    CanDeviceAtiFts(CanOverEthercat* can_interface, unsigned int slave_id, std::string device_name);
 
     /**
      * The destructor
@@ -95,14 +95,14 @@ class CanDeviceAtiFts : public CanDevice
         uint32_t control_2;
     } RxPdo;
 
-    TxPdo* _input;
-    RxPdo* _output;
+    TxPdo* input_;
+    RxPdo* output_;
 
-    int _counts_per_force;
-    int _counts_per_torque;
+    int counts_per_force_;
+    int counts_per_torque_;
 
-    Eigen::Vector3d _force_bias;
-    Eigen::Vector3d _torque_bias;
+    Eigen::Vector3d force_bias_;
+    Eigen::Vector3d torque_bias_;
 };
 
 }

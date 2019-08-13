@@ -8,9 +8,15 @@
 using namespace platform_driver_ethercat;
 
 CanDriveTwitter::CanDriveTwitter(CanOverEthercat* can_interface,
-                                 unsigned int can_id,
-                                 std::string device_name)
-    : CanDevice(can_interface, can_id, device_name), _input(NULL), _output(NULL)
+                                 unsigned int slave_id,
+                                 std::string device_name,
+                                 DriveConfig drive_config,
+                                 bool enabled)
+    : CanDevice(can_interface, slave_id, device_name),
+      drive_param_(drive_config),
+      enabled_(enabled),
+      input_(NULL),
+      output_(NULL)
 {
 }
 
@@ -18,7 +24,7 @@ CanDriveTwitter::~CanDriveTwitter() {}
 
 bool CanDriveTwitter::configure()
 {
-    LOG_DEBUG_S << "Configuring drive " << _device_name << " ...";
+    LOG_DEBUG_S << "Configuring drive " << device_name_ << " ...";
 
     typedef struct SdoWrite
     {
@@ -57,7 +63,7 @@ bool CanDriveTwitter::configure()
     // set limits
     sdo_writes.push_back(SdoWrite{0x6072, 0, 2, 0x0c76});  // max torque (from stall torque)
 
-    int rated_current = _drive_param.getNominalCurrent() * 1000.0;
+    int rated_current = drive_param_.getNominalCurrent() * 1000.0;
     int max_current;
 
     if (rated_current == 0)
@@ -66,7 +72,7 @@ bool CanDriveTwitter::configure()
     }
     else
     {
-        max_current = (_drive_param.getCurrMax() * 1000.0 * 1000.0) / rated_current;
+        max_current = (drive_param_.getCurrMax() * 1000.0 * 1000.0) / rated_current;
     }
 
     sdo_writes.push_back(
@@ -77,23 +83,23 @@ bool CanDriveTwitter::configure()
     sdo_writes.push_back(SdoWrite{0x6075, 0, 4, rated_current});  // motor rated current (in mNm)
     sdo_writes.push_back(SdoWrite{0x6076, 0, 4, 0x0000000b});     // motor rated torque (11 mNm)
     sdo_writes.push_back(
-        SdoWrite{0x607d, 1, 4, (int)_drive_param.getPosMin()});  // min position limit
+        SdoWrite{0x607d, 1, 4, (int)drive_param_.getPosMin()});  // min position limit
     sdo_writes.push_back(
-        SdoWrite{0x607d, 2, 4, (int)_drive_param.getPosMax()});  // max position limit
+        SdoWrite{0x607d, 2, 4, (int)drive_param_.getPosMax()});  // max position limit
     sdo_writes.push_back(
-        SdoWrite{0x607f, 0, 4, (int)_drive_param.getVelMax()});  // max profile velocity
+        SdoWrite{0x607f, 0, 4, (int)drive_param_.getVelMax()});  // max profile velocity
     sdo_writes.push_back(
-        SdoWrite{0x60c5, 0, 4, (int)_drive_param.getMaxAcc()});  // max acceleration
+        SdoWrite{0x60c5, 0, 4, (int)drive_param_.getMaxAcc()});  // max acceleration
     sdo_writes.push_back(
-        SdoWrite{0x60c6, 0, 4, (int)_drive_param.getMaxDec()});  // max deceleration
+        SdoWrite{0x60c6, 0, 4, (int)drive_param_.getMaxDec()});  // max deceleration
 
     // set profile motion parameters
     sdo_writes.push_back(
-        SdoWrite{0x6081, 0, 4, (int)_drive_param.getPtpVelDefault()});  // profile velocity
+        SdoWrite{0x6081, 0, 4, (int)drive_param_.getPtpVelDefault()});  // profile velocity
     sdo_writes.push_back(
-        SdoWrite{0x6083, 0, 4, (int)_drive_param.getMaxAcc()});  // profile acceleration
+        SdoWrite{0x6083, 0, 4, (int)drive_param_.getMaxAcc()});  // profile acceleration
     sdo_writes.push_back(
-        SdoWrite{0x6084, 0, 4, (int)_drive_param.getMaxDec()});  // profile deceleration
+        SdoWrite{0x6084, 0, 4, (int)drive_param_.getMaxDec()});  // profile deceleration
 
     // factors (set to 1 to convert units on software side instead of Elmo conversion)
     sdo_writes.push_back(
@@ -120,33 +126,33 @@ bool CanDriveTwitter::configure()
 
     for (auto sdo_write : sdo_writes)
     {
-        success &= _can_interface->sdoWrite(
-            _can_id, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
+        success &= can_interface_->sdoWrite(
+            slave_id_, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
     }
 
     if (success)
     {
-        LOG_INFO_S << "Drive " << _device_name << " configured";
+        LOG_INFO_S << "Drive " << device_name_ << " configured";
         return true;
     }
     else
     {
-        LOG_ERROR_S << "Failed to configure drive " << _device_name;
+        LOG_ERROR_S << "Failed to configure drive " << device_name_;
         return false;
     }
 }
 
-void CanDriveTwitter::setInputPdo(unsigned char* input_pdo) { _input = (TxPdo*)input_pdo; }
+void CanDriveTwitter::setInputPdo(unsigned char* input_pdo) { input_ = (TxPdo*)input_pdo; }
 
 void CanDriveTwitter::setOutputPdo(unsigned char* output_pdo)
 {
-    _output = (RxPdo*)output_pdo;
+    output_ = (RxPdo*)output_pdo;
 
-    _output->control_word = 0x0004;  // disable quick stop & disable voltage
-    _output->operation_mode = 0;
-    _output->target_position = 0;
-    _output->target_velocity = 0;
-    _output->target_torque = 0;
+    output_->control_word = 0x0004;  // disable quick stop & disable voltage
+    output_->operation_mode = 0;
+    output_->target_position = 0;
+    output_->target_velocity = 0;
+    output_->target_torque = 0;
 }
 
 bool CanDriveTwitter::startup()
@@ -159,19 +165,19 @@ bool CanDriveTwitter::startup()
         switch (state)
         {
             case ST_FAULT:
-                _output->control_word = 0x0080;  // fault reset
+                output_->control_word = 0x0080;  // fault reset
                 break;
             case ST_QUICK_STOP_ACTIVE:
-                _output->control_word = 0x0004;  // disable quick stop
+                output_->control_word = 0x0004;  // disable quick stop
                 break;
             case ST_SWITCH_ON_DISABLED:
-                _output->control_word = 0x0006;  // enable voltage
+                output_->control_word = 0x0006;  // enable voltage
                 break;
             case ST_READY_TO_SWITCH_ON:
-                _output->control_word = 0x0007;  // switch on
+                output_->control_word = 0x0007;  // switch on
                 break;
             case ST_SWITCHED_ON:
-                _output->control_word = 0x000f;  // enable operation
+                output_->control_word = 0x000f;  // enable operation
                 break;
             default: break;
         }
@@ -181,7 +187,7 @@ bool CanDriveTwitter::startup()
 
         if (cnt-- == 0)
         {
-            LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not start up drive " << _device_name
+            LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not start up drive " << device_name_
                         << ". Last state was " << state;
             return false;
         }
@@ -200,19 +206,19 @@ bool CanDriveTwitter::shutdown()
         switch (state)
         {
             case ST_OPERATION_ENABLE:
-                _output->control_word = 0x0007;  // disable operation
+                output_->control_word = 0x0007;  // disable operation
                 break;
             case ST_SWITCHED_ON:
-                _output->control_word = 0x0006;  // switch off
+                output_->control_word = 0x0006;  // switch off
                 break;
             case ST_READY_TO_SWITCH_ON:
-                _output->control_word = 0x0004;  // disable voltage
+                output_->control_word = 0x0004;  // disable voltage
                 break;
             case ST_FAULT:
-                _output->control_word = 0x0080;  // fault reset
+                output_->control_word = 0x0080;  // fault reset
                 break;
             case ST_QUICK_STOP_ACTIVE:
-                _output->control_word = 0x0004;  // disable quick stop & disable voltage
+                output_->control_word = 0x0004;  // disable quick stop & disable voltage
                 break;
             default: break;
         }
@@ -222,13 +228,13 @@ bool CanDriveTwitter::shutdown()
 
         if (cnt-- == 0)
         {
-            LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not shut down drive " << _device_name
+            LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not shut down drive " << device_name_
                         << ". Last state was " << state;
             return false;
         }
     }
 
-    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << _device_name << " shut down.";
+    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << device_name_ << " shut down.";
     return true;
 }
 
@@ -236,7 +242,7 @@ bool CanDriveTwitter::reset() { return shutdown() && startup(); }
 
 CanDriveTwitter::OperationMode CanDriveTwitter::readOperationMode()
 {
-    return (OperationMode)_input->operation_mode_display;
+    return (OperationMode)input_->operation_mode_display;
 }
 
 bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
@@ -248,7 +254,7 @@ bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
         return true;
     }
 
-    _output->operation_mode = mode;
+    output_->operation_mode = mode;
 
     int cnt = 1000;
 
@@ -257,7 +263,7 @@ bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
         if (cnt-- == 0)
         {
             LOG_WARN_S << __PRETTY_FUNCTION__ << ": Could not set operation mode for drive "
-                       << _device_name << ". Current mode is " << current_mode
+                       << device_name_ << ". Current mode is " << current_mode
                        << ". Requested mode is " << mode << ".";
             return false;
         }
@@ -267,27 +273,27 @@ bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
     }
 
     LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Successfully changed operation mode for drive "
-                << _device_name << " to " << current_mode;
+                << device_name_ << " to " << current_mode;
 
     return true;
 }
 
 void CanDriveTwitter::commandPositionRad(double position_rad)
 {
-    int max_pos = _drive_param.getPosMax();
-    int min_pos = _drive_param.getPosMin();
-    int target_pos = _drive_param.getSign() * _drive_param.PosGearRadToPosMotIncr(position_rad);
+    int max_pos = drive_param_.getPosMax();
+    int min_pos = drive_param_.getPosMin();
+    int target_pos = drive_param_.getSign() * drive_param_.PosGearRadToPosMotIncr(position_rad);
     int target_pos_limited = std::min(max_pos, std::max(min_pos, target_pos));
 
     if (target_pos != target_pos_limited)
     {
-        LOG_WARN_S << "Command exceeds position limit for drive " << _device_name;
+        LOG_WARN_S << "Command exceeds position limit for drive " << device_name_;
     }
 
-    _output->target_position = target_pos_limited;
+    output_->target_position = target_pos_limited;
     commandOperationMode(OM_PROFILE_POSITION);
     // commandOperationMode(OM_CYCSYNC_POSITION);
-    _output->control_word |= 0x0030;  // new set point & change set point immediately
+    output_->control_word |= 0x0030;  // new set point & change set point immediately
 
     int cnt = 1000;
 
@@ -297,33 +303,33 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
 
         if (cnt-- == 0)
         {
-            LOG_INFO_S << __PRETTY_FUNCTION__ << ": New set point " << _output->target_position
-                       << " was not acknowledged for drive " << _device_name;
+            LOG_INFO_S << __PRETTY_FUNCTION__ << ": New set point " << output_->target_position
+                       << " was not acknowledged for drive " << device_name_;
             break;
         }
     }
 
-    _output->control_word &= 0xffef;  // no new set point
+    output_->control_word &= 0xffef;  // no new set point
 
-    // LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive: " << _device_name << " Current position: " <<
-    // _input->actual_position << " Target position: " << _output->target_position;
+    // LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive: " << device_name_ << " Current position: " <<
+    // input_->actual_position << " Target position: " << output_->target_position;
 }
 
 void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
 {
-    int max_vel = _drive_param.getVelMax();
+    int max_vel = drive_param_.getVelMax();
     int target_vel =
-        _drive_param.getSign() * _drive_param.VelGearRadSToVelMotIncrPeriod(velocity_rad_sec);
+        drive_param_.getSign() * drive_param_.VelGearRadSToVelMotIncrPeriod(velocity_rad_sec);
     int target_vel_limited = std::min(max_vel, std::max(-max_vel, target_vel));
 
     if (target_vel != target_vel_limited)
     {
-        LOG_WARN_S << "Command exceeds velocity limit for drive " << _device_name;
+        LOG_WARN_S << "Command exceeds velocity limit for drive " << device_name_;
     }
 
-    int current_pos = _input->actual_position;
-    int max_pos = _drive_param.getPosMax();
-    int min_pos = _drive_param.getPosMin();
+    int current_pos = input_->actual_position;
+    int max_pos = drive_param_.getPosMax();
+    int min_pos = drive_param_.getPosMin();
     int target_vel_poslimited = target_vel_limited;
 
     if (current_pos >= max_pos)
@@ -333,10 +339,10 @@ void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
 
     if (target_vel_limited != target_vel_poslimited)
     {
-        LOG_WARN_S << "Position limit reached for drive " << _device_name;
+        LOG_WARN_S << "Position limit reached for drive " << device_name_;
     }
 
-    _output->target_velocity = target_vel_poslimited;
+    output_->target_velocity = target_vel_poslimited;
     commandOperationMode(OM_PROFILE_VELOCITY);
 }
 
@@ -347,35 +353,35 @@ void CanDriveTwitter::commandTorqueNm(double torque_nm)
     int rated_torque = 11;  // 11 mNm
 
     // TODO: transform from load to motor torque
-    _output->target_torque = _drive_param.getSign() * torque_nm * 1000 * 1000 / rated_torque;
+    output_->target_torque = drive_param_.getSign() * torque_nm * 1000 * 1000 / rated_torque;
 }
 
 bool CanDriveTwitter::checkTargetReached()
 {
-    unsigned char bit10 = (unsigned char)((_input->status_word >> 10) & 0x0001);
+    unsigned char bit10 = (unsigned char)((input_->status_word >> 10) & 0x0001);
 
     return (bool)bit10;
 }
 
 bool CanDriveTwitter::checkSetPointAcknowledge()
 {
-    unsigned char bit12 = (unsigned char)((_input->status_word >> 12) & 0x0001);
+    unsigned char bit12 = (unsigned char)((input_->status_word >> 12) & 0x0001);
 
     return (bool)bit12;
 }
 
 double CanDriveTwitter::readPositionRad()
 {
-    //if (_device_name == "MAST_PAN")
-    //    LOG_DEBUG_S << "Current pos of MAST_PAN: " << _input->actual_position;
+    // if (device_name_ == "MAST_PAN")
+    //    LOG_DEBUG_S << "Current pos of MAST_PAN: " << input_->actual_position;
 
-    return _drive_param.getSign() * _drive_param.PosMotIncrToPosGearRad(_input->actual_position);
+    return drive_param_.getSign() * drive_param_.PosMotIncrToPosGearRad(input_->actual_position);
 }
 
 double CanDriveTwitter::readVelocityRadSec()
 {
-    return _drive_param.getSign()
-           * _drive_param.VelMotIncrPeriodToVelGearRadS(_input->actual_velocity);
+    return drive_param_.getSign()
+           * drive_param_.VelMotIncrPeriodToVelGearRadS(input_->actual_velocity);
 }
 
 double CanDriveTwitter::readTorqueNm()
@@ -383,14 +389,14 @@ double CanDriveTwitter::readTorqueNm()
     int rated_torque = 11;  // 11 mNm
 
     // TODO: transform from motor to load torque
-    return _drive_param.getSign() * _input->actual_torque * rated_torque / (1000 * 1000);
+    return drive_param_.getSign() * input_->actual_torque * rated_torque / (1000 * 1000);
 }
 
-double CanDriveTwitter::readAnalogInputV() { return _input->analog_input * 1.0 / 1000.0; }
+double CanDriveTwitter::readAnalogInputV() { return input_->analog_input * 1.0 / 1000.0; }
 
 CanDriveTwitter::DriveState CanDriveTwitter::readDriveState()
 {
-    unsigned char status_lower = (unsigned char)_input->status_word;
+    unsigned char status_lower = (unsigned char)input_->status_word;
     unsigned char bits0to3 = status_lower & 0x0f;
     unsigned char bit5 = (status_lower >> 5) & 0x01;
     unsigned char bit6 = (status_lower >> 6) & 0x01;
@@ -417,8 +423,9 @@ CanDriveTwitter::DriveState CanDriveTwitter::readDriveState()
             if (!bit6) return ST_FAULT_REACTION_ACTIVE;
     }
 
-    LOG_WARN_S << "Drive " << _device_name
-               << " in unknown state! Lower bit of status word: " << status_lower;
+    LOG_WARN_S << "Drive " << device_name_
+               << " in unknown state! Lower byte of status word: " << status_lower;
+    return ST_UNKNOWN;
 }
 
 bool CanDriveTwitter::isError()
@@ -430,20 +437,20 @@ bool CanDriveTwitter::isError()
 
 unsigned int CanDriveTwitter::getError()
 {
-    unsigned char status_upper = (unsigned char)(_input->status_word >> 8);
+    unsigned char status_upper = (unsigned char)(input_->status_word >> 8);
 
     return status_upper;
 }
 
 bool CanDriveTwitter::requestEmergencyStop()
 {
-    uint16_t control_word = _output->control_word;
+    uint16_t control_word = output_->control_word;
 
     // enable quick stop
     control_word &= 0b111111101111011;
     control_word |= 0b000000000000010;
 
-    _output->control_word = control_word;
+    output_->control_word = control_word;
 
     int cnt = 100;
 
@@ -457,7 +464,7 @@ bool CanDriveTwitter::requestEmergencyStop()
         if (cnt-- == 0)
         {
             LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not emergency stop drive "
-                        << _device_name << ". Last state was " << state;
+                        << device_name_ << ". Last state was " << state;
             return false;
         }
     } while (state != ST_QUICK_STOP_ACTIVE);
@@ -465,6 +472,7 @@ bool CanDriveTwitter::requestEmergencyStop()
     return true;
 }
 
-void CanDriveTwitter::setDriveParam(DriveParam drive_param) { _drive_param = drive_param; }
-
-DriveParam* CanDriveTwitter::getDriveParam() { return &_drive_param; }
+bool CanDriveTwitter::isEnabled()
+{
+    return enabled_;
+}
