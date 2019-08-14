@@ -16,7 +16,7 @@ class CanDeviceAtiFts : public CanDevice
     /**
      * The constructor
      */
-    CanDeviceAtiFts(CanOverEthercat* can_interface, unsigned int slave_id, std::string device_name);
+    CanDeviceAtiFts(CanOverEthercat& can_interface, unsigned int slave_id, std::string device_name);
 
     /**
      * The destructor

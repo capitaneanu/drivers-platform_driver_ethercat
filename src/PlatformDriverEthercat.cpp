@@ -22,18 +22,13 @@ PlatformDriverEthercat::PlatformDriverEthercat(std::string dev_address,
                                                unsigned int num_slaves,
                                                DriveSlaveMapping drive_mapping,
                                                FtsSlaveMapping fts_mapping)
-    : can_interface_(new CanOverEthercat(dev_address, num_slaves))
+    : can_interface_(dev_address, num_slaves)
 {
     applyConfiguration(drive_mapping, fts_mapping);
 }
 
 PlatformDriverEthercat::~PlatformDriverEthercat()
 {
-    if (can_interface_ != NULL)
-    {
-        delete can_interface_;
-    }
-
     for (auto drive : can_drives_)
     {
         if (drive != NULL)
@@ -62,7 +57,7 @@ bool PlatformDriverEthercat::applyConfiguration(DriveSlaveMapping drive_mapping,
                                                      drive_params.config,
                                                      drive_params.enabled);
         can_drives_.push_back(drive);
-        can_interface_->addDevice(drive);
+        can_interface_.addDevice(drive);
     }
 
     for (auto fts_params : fts_mapping)
@@ -70,7 +65,7 @@ bool PlatformDriverEthercat::applyConfiguration(DriveSlaveMapping drive_mapping,
         CanDeviceAtiFts* device =
             new CanDeviceAtiFts(can_interface_, fts_params.slave_id, fts_params.name);
         can_fts_.push_back(device);
-        can_interface_->addDevice(device);
+        can_interface_.addDevice(device);
     }
 
     LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Success" << std::endl;
@@ -82,7 +77,7 @@ bool PlatformDriverEthercat::initPlatform()
 {
     LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Initializing EtherCAT interface";
 
-    if (!can_interface_->init())
+    if (!can_interface_.init())
     {
         LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not initialize EtherCAT interface";
         return false;

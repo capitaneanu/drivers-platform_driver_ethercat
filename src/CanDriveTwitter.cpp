@@ -7,7 +7,7 @@
 
 using namespace platform_driver_ethercat;
 
-CanDriveTwitter::CanDriveTwitter(CanOverEthercat* can_interface,
+CanDriveTwitter::CanDriveTwitter(CanOverEthercat& can_interface,
                                  unsigned int slave_id,
                                  std::string device_name,
                                  DriveConfig drive_config,
@@ -126,7 +126,7 @@ bool CanDriveTwitter::configure()
 
     for (auto sdo_write : sdo_writes)
     {
-        success &= can_interface_->sdoWrite(
+        success &= can_interface_.sdoWrite(
             slave_id_, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
     }
 

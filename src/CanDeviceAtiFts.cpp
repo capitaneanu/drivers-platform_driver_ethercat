@@ -6,7 +6,7 @@
 
 using namespace platform_driver_ethercat;
 
-CanDeviceAtiFts::CanDeviceAtiFts(CanOverEthercat* can_interface,
+CanDeviceAtiFts::CanDeviceAtiFts(CanOverEthercat& can_interface,
                                  unsigned int slave_id,
                                  std::string device_name)
     : CanDevice(can_interface, slave_id, device_name),
@@ -72,23 +72,23 @@ bool CanDeviceAtiFts::configure()
 
     for (auto sdo_write : sdo_writes)
     {
-        success &= can_interface_->sdoWrite(
+        success &= can_interface_.sdoWrite(
             slave_id_, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
     }
 
     int force_unit;
     int torque_unit;
 
-    success &= can_interface_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x29, &force_unit);
-    success &= can_interface_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x2a, &torque_unit);
+    success &= can_interface_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x29, &force_unit);
+    success &= can_interface_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x2a, &torque_unit);
 
     LOG_DEBUG_S << "Force unit of sensor " << device_name_ << " is " << force_unit;
     LOG_DEBUG_S << "Torque unit of sensor " << device_name_ << " is " << torque_unit;
 
     success &=
-        can_interface_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x31, &counts_per_force_);
+        can_interface_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x31, &counts_per_force_);
     success &=
-        can_interface_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x32, &counts_per_torque_);
+        can_interface_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x32, &counts_per_torque_);
 
     if (success)
     {

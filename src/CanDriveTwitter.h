@@ -15,7 +15,7 @@ class CanDriveTwitter : public CanDevice
     /**
      * The constructor
      */
-    CanDriveTwitter(CanOverEthercat* can_interface,
+    CanDriveTwitter(CanOverEthercat& can_interface,
                     unsigned int slave_id,
                     std::string device_name,
                     DriveConfig drive_config,

@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include "CanOverEthercat.h"
 #include "PlatformDriverEthercatTypes.h"
 
 namespace platform_driver_ethercat
@@ -9,7 +10,6 @@ namespace platform_driver_ethercat
 
 class CanDeviceAtiFts;
 class CanDriveTwitter;
-class CanOverEthercat;
 
 /**
  * Represents and Controls all Drive components on an arbitrary platform.
@@ -125,10 +125,9 @@ class PlatformDriverEthercat
     void readFtsTorqueNm(unsigned int fts_id, double& tx, double& ty, double& tz);
 
   private:
-    bool applyConfiguration(DriveSlaveMapping drive_mapping,
-                            FtsSlaveMapping fts_mapping);
+    bool applyConfiguration(DriveSlaveMapping drive_mapping, FtsSlaveMapping fts_mapping);
 
-    CanOverEthercat* can_interface_;
+    CanOverEthercat can_interface_;
     std::vector<CanDriveTwitter*> can_drives_;
     std::vector<CanDeviceAtiFts*> can_fts_;
 };
