@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 #include <thread>
 
@@ -17,7 +18,7 @@ class CanOverEthercat
     bool init();
     void close();
     bool isInit();
-    bool addDevice(CanDevice* device);
+    bool addDevice(std::shared_ptr<CanDevice> device);
     unsigned char* getInputPdoPtr(uint16_t slave);
     unsigned char* getOutputPdoPtr(uint16_t slave);
 
@@ -29,7 +30,7 @@ class CanOverEthercat
     const unsigned int num_slaves_;
     char io_map_[4096];
     bool is_initialized_;
-    std::map<unsigned int, CanDevice*> devices_;
+    std::map<unsigned int, std::shared_ptr<CanDevice>> devices_;
     std::thread ethercat_thread_;
 
     static int expected_wkc_;
@@ -37,5 +38,4 @@ class CanOverEthercat
 
     void pdoCycle();
 };
-
 }

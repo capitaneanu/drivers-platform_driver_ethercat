@@ -27,43 +27,26 @@ PlatformDriverEthercat::PlatformDriverEthercat(std::string dev_address,
     applyConfiguration(drive_mapping, fts_mapping);
 }
 
-PlatformDriverEthercat::~PlatformDriverEthercat()
-{
-    for (auto drive : can_drives_)
-    {
-        if (drive != NULL)
-        {
-            delete drive;
-        }
-    }
-
-    for (auto fts : can_fts_)
-    {
-        if (fts != NULL)
-        {
-            delete fts;
-        }
-    }
-}
+PlatformDriverEthercat::~PlatformDriverEthercat() {}
 
 bool PlatformDriverEthercat::applyConfiguration(DriveSlaveMapping drive_mapping,
                                                 FtsSlaveMapping fts_mapping)
 {
-    for (auto drive_params : drive_mapping)
+    for (const auto& drive_params : drive_mapping)
     {
-        CanDriveTwitter* drive = new CanDriveTwitter(can_interface_,
-                                                     drive_params.slave_id,
-                                                     drive_params.name,
-                                                     drive_params.config,
-                                                     drive_params.enabled);
+        auto drive = std::make_shared<CanDriveTwitter>(can_interface_,
+                                                       drive_params.slave_id,
+                                                       drive_params.name,
+                                                       drive_params.config,
+                                                       drive_params.enabled);
         can_drives_.push_back(drive);
         can_interface_.addDevice(drive);
     }
 
-    for (auto fts_params : fts_mapping)
+    for (const auto& fts_params : fts_mapping)
     {
-        CanDeviceAtiFts* device =
-            new CanDeviceAtiFts(can_interface_, fts_params.slave_id, fts_params.name);
+        auto device =
+            std::make_shared<CanDeviceAtiFts>(can_interface_, fts_params.slave_id, fts_params.name);
         can_fts_.push_back(device);
         can_interface_.addDevice(device);
     }
@@ -100,20 +83,21 @@ bool PlatformDriverEthercat::startupPlatform()
 
     while (i < can_drives_.size())
     {
-        std::vector<std::tuple<CanDriveTwitter*, std::future<bool>>> future_tuples;
+        std::vector<std::tuple<CanDriveTwitter&, std::future<bool>>> future_tuples;
 
         unsigned int j = 0;
 
         while (j < 6)
         {
-            CanDriveTwitter* drive = can_drives_[i];
+            CanDriveTwitter& drive = *can_drives_[i];
 
-            if (drive->isEnabled())
+            if (drive.isEnabled())
             {
-                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Starting drive " << drive->getDeviceName();
+                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Starting drive " << drive.getDeviceName();
 
                 auto future = std::async(std::launch::async, &CanDriveTwitter::startup, drive);
-                auto tuple = std::make_tuple(drive, std::move(future));
+                auto tuple =
+                    std::tuple<CanDriveTwitter&, std::future<bool>>(drive, std::move(future));
 
                 future_tuples.push_back(std::move(tuple));
 
@@ -130,18 +114,18 @@ bool PlatformDriverEthercat::startupPlatform()
 
         for (auto& future_tuple : future_tuples)
         {
-            CanDriveTwitter* drive = std::get<0>(future_tuple);
+            CanDriveTwitter& drive = std::get<0>(future_tuple);
             std::future<bool> future = std::move(std::get<1>(future_tuple));
 
             if (future.get())
             {
-                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << drive->getDeviceName()
+                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << drive.getDeviceName()
                             << " started";
             }
             else
             {
-                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Startup of drive "
-                            << drive->getDeviceName() << " failed";
+                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Startup of drive " << drive.getDeviceName()
+                            << " failed";
                 return false;
             }
         }
@@ -162,7 +146,7 @@ bool PlatformDriverEthercat::shutdownPlatform()
 {
     bool bRet = true;
     // shut down all motors
-    for (auto drive : can_drives_)
+    for (auto& drive : can_drives_)
     {
         bRet &= drive->shutdown();
     }
@@ -182,7 +166,7 @@ bool PlatformDriverEthercat::resetPlatform()
     bool bRetMotor = true;
     bool bRet = true;
 
-    for (auto drive : can_drives_)
+    for (auto& drive : can_drives_)
     {
         bRetMotor = drive->reset();
 

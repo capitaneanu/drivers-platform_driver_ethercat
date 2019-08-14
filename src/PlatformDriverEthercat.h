@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 #include "CanOverEthercat.h"
@@ -127,8 +128,9 @@ class PlatformDriverEthercat
   private:
     bool applyConfiguration(DriveSlaveMapping drive_mapping, FtsSlaveMapping fts_mapping);
 
+    std::vector<std::shared_ptr<CanDriveTwitter>> can_drives_;
+    std::vector<std::shared_ptr<CanDeviceAtiFts>> can_fts_;
+
     CanOverEthercat can_interface_;
-    std::vector<CanDriveTwitter*> can_drives_;
-    std::vector<CanDeviceAtiFts*> can_fts_;
 };
 }

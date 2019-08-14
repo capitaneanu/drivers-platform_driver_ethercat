@@ -45,7 +45,7 @@ bool CanOverEthercat::init()
             }
 
             /* configure all devices via sdo */
-            for (auto device : devices_)
+            for (auto& device : devices_)
             {
                 unsigned int slave_id = device.first;
 
@@ -70,7 +70,7 @@ bool CanOverEthercat::init()
             ec_configdc();
 
             /* set pointers to pdo map for all devices */
-            for (auto device : devices_)
+            for (auto& device : devices_)
             {
                 unsigned int slave_id = device.first;
 
@@ -176,7 +176,7 @@ void CanOverEthercat::close()
 
 bool CanOverEthercat::isInit() { return is_initialized_; }
 
-bool CanOverEthercat::addDevice(CanDevice* device)
+bool CanOverEthercat::addDevice(std::shared_ptr<CanDevice> device)
 {
     if (isInit())
     {
