@@ -51,7 +51,7 @@ class PlatformDriverEthercat
      * Enables the motor, check the status.
      * @return True if the drive is properly started.
      */
-    bool startupDrive(unsigned int drive_id);
+    bool startupDrive(std::string drive_name);
 
     /**
      * Shuts down the platform.
@@ -65,7 +65,7 @@ class PlatformDriverEthercat
      * Disables motor, enables brake and disconnects.
      * @return True if the drive is properly shut down.
      */
-    bool shutdownDrive(unsigned int drive_id);
+    bool shutdownDrive(std::string drive_name);
 
     /**
      * Reinitializes the nodes on the bus.
@@ -81,55 +81,55 @@ class PlatformDriverEthercat
      * drives.
      * @return True if re-initialization is successful, false otherwise.
      */
-    bool resetDrive(unsigned int drive_id);
+    bool resetDrive(std::string drive_name);
 
     /**
-     * Sends position command for specific can node (PTP Motion).
+     * Sends position command for specific drive (PTP Motion).
      */
-    void commandDrivePositionRad(unsigned int drive_id, double position_rad);
+    void commandDrivePositionRad(std::string drive_name, double position_rad);
 
     /**
      * Sends velocity command for specific drive.
      */
-    void commandDriveVelocityRadSec(unsigned int drive_id, double velocity_rad_sec);
+    void commandDriveVelocityRadSec(std::string drive_name, double velocity_rad_sec);
 
     /**
      * Sends torque command for specific drive.
      */
-    void commandDriveTorqueNm(unsigned int drive_id, double torque_nm);
+    void commandDriveTorqueNm(std::string drive_name, double torque_nm);
 
     /**
      * Gets the position and velocity of a given drive.
      */
-    void readDrivePositionRad(unsigned int drive_id, double& position_rad);
+    void readDrivePositionRad(std::string drive_name, double& position_rad);
 
     /**
-     * Gets the velocity of a given node.
+     * Gets the velocity of a given drive.
      */
-    void readDriveVelocityRadSec(unsigned int drive_id, double& velocity_rad_sec);
+    void readDriveVelocityRadSec(std::string drive_name, double& velocity_rad_sec);
 
     /**
-     * Gets the motor torque (from active current) of a given node.
+     * Gets the motor torque (from active current) of a given drive.
      */
-    void readDriveTorqueNm(unsigned int drive_id, double& torque_nm);
+    void readDriveTorqueNm(std::string drive_name, double& torque_nm);
 
-    bool readDriveData(unsigned int drive_id,
+    bool readDriveData(std::string drive_name,
                        double& position_rad,
                        double& velocity_rad_sec,
                        double& current_amp,
                        double& torque_nm);
 
-    void readDriveAnalogInputV(unsigned int drive_id, double& analog_input_v);
+    void readDriveAnalogInputV(std::string drive_name, double& analog_input_v);
 
-    void readFtsForceN(unsigned int fts_id, double& fx, double& fy, double& fz);
+    void readFtsForceN(std::string fts_name, double& fx, double& fy, double& fz);
 
-    void readFtsTorqueNm(unsigned int fts_id, double& tx, double& ty, double& tz);
+    void readFtsTorqueNm(std::string fts_name, double& tx, double& ty, double& tz);
 
   private:
     bool applyConfiguration(DriveSlaveMapping drive_mapping, FtsSlaveMapping fts_mapping);
 
-    std::vector<std::shared_ptr<CanDriveTwitter>> can_drives_;
-    std::vector<std::shared_ptr<CanDeviceAtiFts>> can_fts_;
+    std::map<std::string, std::shared_ptr<CanDriveTwitter>> can_drives_;
+    std::map<std::string, std::shared_ptr<CanDeviceAtiFts>> can_fts_;
 
     CanOverEthercat can_interface_;
 };

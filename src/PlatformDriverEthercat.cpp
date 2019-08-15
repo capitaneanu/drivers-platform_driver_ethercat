@@ -39,7 +39,7 @@ bool PlatformDriverEthercat::applyConfiguration(DriveSlaveMapping drive_mapping,
                                                        drive_params.name,
                                                        drive_params.config,
                                                        drive_params.enabled);
-        can_drives_.push_back(drive);
+        can_drives_.insert(std::make_pair(drive->getDeviceName(), drive));
         can_interface_.addDevice(drive);
     }
 
@@ -47,7 +47,7 @@ bool PlatformDriverEthercat::applyConfiguration(DriveSlaveMapping drive_mapping,
     {
         auto device =
             std::make_shared<CanDeviceAtiFts>(can_interface_, fts_params.slave_id, fts_params.name);
-        can_fts_.push_back(device);
+        can_fts_.insert(std::make_pair(device->getDeviceName(), device));
         can_interface_.addDevice(device);
     }
 
@@ -81,7 +81,8 @@ bool PlatformDriverEthercat::startupPlatform()
     // Start all drives in groups of 6
     unsigned int i = 0;
 
-    while (i < can_drives_.size())
+    auto drive_iterator = can_drives_.begin();
+    while (drive_iterator != can_drives_.end())
     {
         std::vector<std::tuple<CanDriveTwitter&, std::future<bool>>> future_tuples;
 
@@ -89,7 +90,7 @@ bool PlatformDriverEthercat::startupPlatform()
 
         while (j < 6)
         {
-            CanDriveTwitter& drive = *can_drives_[i];
+            CanDriveTwitter& drive = *drive_iterator->second;
 
             if (drive.isEnabled())
             {
@@ -104,9 +105,9 @@ bool PlatformDriverEthercat::startupPlatform()
                 j++;
             }
 
-            i++;
+            drive_iterator++;
 
-            if (i >= can_drives_.size())
+            if (drive_iterator == can_drives_.end())
             {
                 break;
             }
@@ -134,11 +135,11 @@ bool PlatformDriverEthercat::startupPlatform()
     return true;
 }
 
-bool PlatformDriverEthercat::startupDrive(unsigned int drive_id)
+bool PlatformDriverEthercat::startupDrive(std::string drive_name)
 {
     bool bRet = true;
     // start up the motor
-    bRet &= can_drives_[drive_id]->startup();
+    bRet &= can_drives_[drive_name]->startup();
     return bRet;
 }
 
@@ -148,16 +149,16 @@ bool PlatformDriverEthercat::shutdownPlatform()
     // shut down all motors
     for (auto& drive : can_drives_)
     {
-        bRet &= drive->shutdown();
+        bRet &= drive.second->shutdown();
     }
     return bRet;
 }
 
-bool PlatformDriverEthercat::shutdownDrive(unsigned int drive_id)
+bool PlatformDriverEthercat::shutdownDrive(std::string drive_name)
 {
     bool bRet = true;
     // shut down the motor
-    bRet &= can_drives_[drive_id]->shutdown();
+    bRet &= can_drives_[drive_name]->shutdown();
     return bRet;
 }
 
@@ -168,11 +169,11 @@ bool PlatformDriverEthercat::resetPlatform()
 
     for (auto& drive : can_drives_)
     {
-        bRetMotor = drive->reset();
+        bRetMotor = drive.second->reset();
 
         if (!bRetMotor)
         {
-            LOG_ERROR_S << "Resetting of Motor " << drive->getDeviceName() << " failed";
+            LOG_ERROR_S << "Resetting of Motor " << drive.second->getDeviceName() << " failed";
         }
 
         bRet &= bRetMotor;
@@ -181,9 +182,10 @@ bool PlatformDriverEthercat::resetPlatform()
     return bRet;
 }
 
-bool PlatformDriverEthercat::resetDrive(unsigned int drive_id)
+bool PlatformDriverEthercat::resetDrive(std::string drive_name)
 {
-    auto drive = can_drives_[drive_id];
+    auto& drive = can_drives_[drive_name];
+
     bool bRet = drive->reset();
 
     if (!bRet)
@@ -194,50 +196,52 @@ bool PlatformDriverEthercat::resetDrive(unsigned int drive_id)
     return bRet;
 }
 
-void PlatformDriverEthercat::commandDrivePositionRad(unsigned int drive_id, double position_rad)
+void PlatformDriverEthercat::commandDrivePositionRad(std::string drive_name, double position_rad)
 {
-    can_drives_[drive_id]->commandPositionRad(position_rad);
+    can_drives_[drive_name]->commandPositionRad(position_rad);
 }
 
-void PlatformDriverEthercat::commandDriveVelocityRadSec(unsigned int drive_id,
+void PlatformDriverEthercat::commandDriveVelocityRadSec(std::string drive_name,
                                                         double velocity_rad_sec)
 {
-    can_drives_[drive_id]->commandVelocityRadSec(velocity_rad_sec);
+    can_drives_[drive_name]->commandVelocityRadSec(velocity_rad_sec);
 }
 
-void PlatformDriverEthercat::commandDriveTorqueNm(unsigned int drive_id, double torque_nm)
+void PlatformDriverEthercat::commandDriveTorqueNm(std::string drive_name, double torque_nm)
 {
-    can_drives_[drive_id]->commandTorqueNm(torque_nm);
+    can_drives_[drive_name]->commandTorqueNm(torque_nm);
 }
 
-void PlatformDriverEthercat::readDrivePositionRad(unsigned int drive_id, double& position_rad)
+void PlatformDriverEthercat::readDrivePositionRad(std::string drive_name, double& position_rad)
 {
-    position_rad = can_drives_[drive_id]->readPositionRad();
+    position_rad = can_drives_[drive_name]->readPositionRad();
 }
 
-void PlatformDriverEthercat::readDriveVelocityRadSec(unsigned int drive_id,
+void PlatformDriverEthercat::readDriveVelocityRadSec(std::string drive_name,
                                                      double& velocity_rad_sec)
 {
-    velocity_rad_sec = can_drives_[drive_id]->readVelocityRadSec();
+    velocity_rad_sec = can_drives_[drive_name]->readVelocityRadSec();
 }
 
-void PlatformDriverEthercat::readDriveTorqueNm(unsigned int drive_id, double& torque_nm)
+void PlatformDriverEthercat::readDriveTorqueNm(std::string drive_name, double& torque_nm)
 {
-    torque_nm = can_drives_[drive_id]->readTorqueNm();
+    torque_nm = can_drives_[drive_name]->readTorqueNm();
 }
 
-bool PlatformDriverEthercat::readDriveData(unsigned int drive_id,
+bool PlatformDriverEthercat::readDriveData(std::string drive_name,
                                            double& position_rad,
                                            double& velocity_rad_sec,
                                            double& current_amp,
                                            double& torque_nm)
 {
-    if (!can_drives_[drive_id]->isError())
+    auto& drive = can_drives_[drive_name];
+
+    if (!drive->isError())
     {
-        position_rad = can_drives_[drive_id]->readPositionRad();
-        velocity_rad_sec = can_drives_[drive_id]->readVelocityRadSec();
+        position_rad = drive->readPositionRad();
+        velocity_rad_sec = drive->readVelocityRadSec();
         // TODO: Read out current
-        torque_nm = can_drives_[drive_id]->readTorqueNm();
+        torque_nm = drive->readTorqueNm();
 
         return true;
     }
@@ -245,26 +249,26 @@ bool PlatformDriverEthercat::readDriveData(unsigned int drive_id,
     return false;
 }
 
-void PlatformDriverEthercat::readDriveAnalogInputV(unsigned int drive_id, double& analog_input_v)
+void PlatformDriverEthercat::readDriveAnalogInputV(std::string drive_name, double& analog_input_v)
 {
-    analog_input_v = can_drives_[drive_id]->readAnalogInputV();
+    analog_input_v = can_drives_[drive_name]->readAnalogInputV();
 }
 
-void PlatformDriverEthercat::readFtsForceN(unsigned int fts_id, double& fx, double& fy, double& fz)
+void PlatformDriverEthercat::readFtsForceN(std::string fts_name, double& fx, double& fy, double& fz)
 {
-    Eigen::Vector3d force = can_fts_[fts_id]->readForceN();
+    Eigen::Vector3d force = can_fts_[fts_name]->readForceN();
 
     fx = force[0];
     fy = force[1];
     fz = force[2];
 }
 
-void PlatformDriverEthercat::readFtsTorqueNm(unsigned int fts_id,
+void PlatformDriverEthercat::readFtsTorqueNm(std::string fts_name,
                                              double& tx,
                                              double& ty,
                                              double& tz)
 {
-    Eigen::Vector3d torque = can_fts_[fts_id]->readTorqueNm();
+    Eigen::Vector3d torque = can_fts_[fts_name]->readTorqueNm();
 
     tx = torque[0];
     ty = torque[1];
