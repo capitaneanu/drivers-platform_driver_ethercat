@@ -10,11 +10,9 @@ using namespace platform_driver_ethercat;
 CanDriveTwitter::CanDriveTwitter(CanOverEthercat& can_interface,
                                  unsigned int slave_id,
                                  std::string device_name,
-                                 DriveConfig drive_config,
-                                 bool enabled)
+                                 DriveConfig drive_config)
     : CanDevice(can_interface, slave_id, device_name),
       drive_param_(drive_config),
-      enabled_(enabled),
       input_(NULL),
       output_(NULL)
 {
@@ -24,7 +22,7 @@ CanDriveTwitter::~CanDriveTwitter() {}
 
 bool CanDriveTwitter::configure()
 {
-    LOG_DEBUG_S << "Configuring drive " << device_name_ << " ...";
+    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Configuring drive " << device_name_ << " ...";
 
     typedef struct SdoWrite
     {
@@ -132,12 +130,12 @@ bool CanDriveTwitter::configure()
 
     if (success)
     {
-        LOG_INFO_S << "Drive " << device_name_ << " configured";
+        LOG_INFO_S << __PRETTY_FUNCTION__ << ": Drive " << device_name_ << " configured";
         return true;
     }
     else
     {
-        LOG_ERROR_S << "Failed to configure drive " << device_name_;
+        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Failed to configure drive " << device_name_;
         return false;
     }
 }
@@ -157,6 +155,8 @@ void CanDriveTwitter::setOutputPdo(unsigned char* output_pdo)
 
 bool CanDriveTwitter::startup()
 {
+    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Starting up drive " << device_name_ << " ...";
+
     DriveState state = readDriveState();
     int cnt = 100;
 
@@ -193,11 +193,15 @@ bool CanDriveTwitter::startup()
         }
     }
 
+    LOG_INFO_S << __PRETTY_FUNCTION__ << ": Drive " << device_name_ << " started up";
+
     return true;
 }
 
 bool CanDriveTwitter::shutdown()
 {
+    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Shutting down drive " << device_name_ << " ...";
+
     DriveState state = readDriveState();
     int cnt = 100;
 
@@ -234,7 +238,8 @@ bool CanDriveTwitter::shutdown()
         }
     }
 
-    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << device_name_ << " shut down.";
+    LOG_INFO_S << __PRETTY_FUNCTION__ << ": Drive " << device_name_ << " shut down";
+
     return true;
 }
 
@@ -287,7 +292,8 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
 
     if (target_pos != target_pos_limited)
     {
-        LOG_WARN_S << "Command exceeds position limit for drive " << device_name_;
+        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Command exceeds position limit for drive "
+                   << device_name_;
     }
 
     output_->target_position = target_pos_limited;
@@ -324,7 +330,8 @@ void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
 
     if (target_vel != target_vel_limited)
     {
-        LOG_WARN_S << "Command exceeds velocity limit for drive " << device_name_;
+        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Command exceeds velocity limit for drive "
+                   << device_name_;
     }
 
     int current_pos = input_->actual_position;
@@ -339,7 +346,7 @@ void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
 
     if (target_vel_limited != target_vel_poslimited)
     {
-        LOG_WARN_S << "Position limit reached for drive " << device_name_;
+        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Position limit reached for drive " << device_name_;
     }
 
     output_->target_velocity = target_vel_poslimited;
@@ -423,7 +430,7 @@ CanDriveTwitter::DriveState CanDriveTwitter::readDriveState()
             if (!bit6) return ST_FAULT_REACTION_ACTIVE;
     }
 
-    LOG_WARN_S << "Drive " << device_name_
+    LOG_WARN_S << __PRETTY_FUNCTION__ << ": Drive " << device_name_
                << " in unknown state! Lower byte of status word: " << status_lower;
     return ST_UNKNOWN;
 }
@@ -470,9 +477,4 @@ bool CanDriveTwitter::requestEmergencyStop()
     } while (state != ST_QUICK_STOP_ACTIVE);
 
     return true;
-}
-
-bool CanDriveTwitter::isEnabled()
-{
-    return enabled_;
 }

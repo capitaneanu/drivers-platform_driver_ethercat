@@ -18,8 +18,7 @@ class CanDriveTwitter : public CanDevice
     CanDriveTwitter(CanOverEthercat& can_interface,
                     unsigned int slave_id,
                     std::string device_name,
-                    DriveConfig drive_config,
-                    bool enabled);
+                    DriveConfig drive_config);
 
     /**
      * The destructor
@@ -111,8 +110,6 @@ class CanDriveTwitter : public CanDevice
      * @return true if the result of the process is successful
      */
     bool requestEmergencyStop();
-
-    bool isEnabled();
 
   private:
     enum class DriveObject
@@ -267,7 +264,6 @@ class CanDriveTwitter : public CanDevice
     } TxPdo;
 
     DriveParam drive_param_;
-    bool enabled_;
 
     TxPdo* input_;
     RxPdo* output_;

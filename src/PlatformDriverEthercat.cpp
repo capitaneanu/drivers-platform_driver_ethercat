@@ -12,48 +12,48 @@
 #include "CanDeviceAtiFts.h"
 #include "CanDriveTwitter.h"
 #include "CanOverEthercat.h"
+#include "JointActive.h"
+#include "JointPassive.h"
 #include "PlatformDriverEthercat.h"
 
 #include <base-logging/Logging.hpp>
 
 using namespace platform_driver_ethercat;
 
-PlatformDriverEthercat::PlatformDriverEthercat(std::string dev_address,
-                                               unsigned int num_slaves,
-                                               DriveSlaveMapping drive_mapping,
-                                               FtsSlaveMapping fts_mapping)
+PlatformDriverEthercat::PlatformDriverEthercat(std::string dev_address, unsigned int num_slaves)
     : can_interface_(dev_address, num_slaves)
 {
-    applyConfiguration(drive_mapping, fts_mapping);
 }
 
 PlatformDriverEthercat::~PlatformDriverEthercat() {}
 
-bool PlatformDriverEthercat::applyConfiguration(DriveSlaveMapping drive_mapping,
-                                                FtsSlaveMapping fts_mapping)
+void PlatformDriverEthercat::addDriveTwitter(unsigned int slave_id,
+                                             std::string name,
+                                             DriveConfig config,
+                                             bool temp_sensor)
 {
-    for (const auto& drive_params : drive_mapping)
-    {
-        auto drive = std::make_shared<CanDriveTwitter>(can_interface_,
-                                                       drive_params.slave_id,
-                                                       drive_params.name,
-                                                       drive_params.config,
-                                                       drive_params.enabled);
-        can_drives_.insert(std::make_pair(drive->getDeviceName(), drive));
-        can_interface_.addDevice(drive);
-    }
+    auto drive = std::make_shared<CanDriveTwitter>(can_interface_, slave_id, name, config);
+    can_drives_.insert(std::make_pair(drive->getDeviceName(), drive));
+    can_interface_.addDevice(drive);
+}
 
-    for (const auto& fts_params : fts_mapping)
-    {
-        auto device =
-            std::make_shared<CanDeviceAtiFts>(can_interface_, fts_params.slave_id, fts_params.name);
-        can_fts_.insert(std::make_pair(device->getDeviceName(), device));
-        can_interface_.addDevice(device);
-    }
+void PlatformDriverEthercat::addAtiFts(unsigned int slave_id, std::string name)
+{
+    auto fts = std::make_shared<CanDeviceAtiFts>(can_interface_, slave_id, name);
+    can_fts_.insert(std::make_pair(fts->getDeviceName(), fts));
+    can_interface_.addDevice(fts);
+}
 
-    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Success" << std::endl;
+void PlatformDriverEthercat::addActiveJoint(std::string name, std::string drive, bool enabled)
+{
+    std::unique_ptr<JointActive> joint(new JointActive(name, can_drives_.at(drive), enabled));
+    joints_.insert(std::make_pair(joint->getName(), std::move(joint)));
+}
 
-    return true;
+void PlatformDriverEthercat::addPassiveJoint(std::string name, std::string drive, bool enabled)
+{
+    std::unique_ptr<JointPassive> joint(new JointPassive(name, can_drives_.at(drive), enabled));
+    joints_.insert(std::make_pair(joint->getName(), std::move(joint)));
 }
 
 bool PlatformDriverEthercat::initPlatform()
@@ -92,18 +92,12 @@ bool PlatformDriverEthercat::startupPlatform()
         {
             CanDriveTwitter& drive = *drive_iterator->second;
 
-            if (drive.isEnabled())
-            {
-                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Starting drive " << drive.getDeviceName();
+            auto future = std::async(std::launch::async, &CanDriveTwitter::startup, drive);
+            auto tuple = std::tuple<CanDriveTwitter&, std::future<bool>>(drive, std::move(future));
 
-                auto future = std::async(std::launch::async, &CanDriveTwitter::startup, drive);
-                auto tuple =
-                    std::tuple<CanDriveTwitter&, std::future<bool>>(drive, std::move(future));
+            future_tuples.push_back(std::move(tuple));
 
-                future_tuples.push_back(std::move(tuple));
-
-                j++;
-            }
+            j++;
 
             drive_iterator++;
 
@@ -116,31 +110,16 @@ bool PlatformDriverEthercat::startupPlatform()
         for (auto& future_tuple : future_tuples)
         {
             CanDriveTwitter& drive = std::get<0>(future_tuple);
-            std::future<bool> future = std::move(std::get<1>(future_tuple));
+            std::future<bool>& future = std::get<1>(future_tuple);
 
-            if (future.get())
+            if (!future.get())
             {
-                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << drive.getDeviceName()
-                            << " started";
-            }
-            else
-            {
-                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Startup of drive " << drive.getDeviceName()
-                            << " failed";
                 return false;
             }
         }
     }
 
     return true;
-}
-
-bool PlatformDriverEthercat::startupDrive(std::string drive_name)
-{
-    bool bRet = true;
-    // start up the motor
-    bRet &= can_drives_[drive_name]->startup();
-    return bRet;
 }
 
 bool PlatformDriverEthercat::shutdownPlatform()
@@ -151,14 +130,6 @@ bool PlatformDriverEthercat::shutdownPlatform()
     {
         bRet &= drive.second->shutdown();
     }
-    return bRet;
-}
-
-bool PlatformDriverEthercat::shutdownDrive(std::string drive_name)
-{
-    bool bRet = true;
-    // shut down the motor
-    bRet &= can_drives_[drive_name]->shutdown();
     return bRet;
 }
 
@@ -182,81 +153,41 @@ bool PlatformDriverEthercat::resetPlatform()
     return bRet;
 }
 
-bool PlatformDriverEthercat::resetDrive(std::string drive_name)
+bool PlatformDriverEthercat::commandJointPositionRad(std::string joint_name, double position_rad)
 {
-    auto& drive = can_drives_[drive_name];
-
-    bool bRet = drive->reset();
-
-    if (!bRet)
-    {
-        LOG_ERROR_S << "Resetting of Motor " << drive->getDeviceName() << " failed";
-    }
-
-    return bRet;
+    return joints_.at(joint_name)->commandPositionRad(position_rad);
 }
 
-void PlatformDriverEthercat::commandDrivePositionRad(std::string drive_name, double position_rad)
-{
-    can_drives_[drive_name]->commandPositionRad(position_rad);
-}
-
-void PlatformDriverEthercat::commandDriveVelocityRadSec(std::string drive_name,
+bool PlatformDriverEthercat::commandJointVelocityRadSec(std::string joint_name,
                                                         double velocity_rad_sec)
 {
-    can_drives_[drive_name]->commandVelocityRadSec(velocity_rad_sec);
+    return joints_.at(joint_name)->commandVelocityRadSec(velocity_rad_sec);
 }
 
-void PlatformDriverEthercat::commandDriveTorqueNm(std::string drive_name, double torque_nm)
+bool PlatformDriverEthercat::commandJointTorqueNm(std::string joint_name, double torque_nm)
 {
-    can_drives_[drive_name]->commandTorqueNm(torque_nm);
+    return joints_.at(joint_name)->commandTorqueNm(torque_nm);
 }
 
-void PlatformDriverEthercat::readDrivePositionRad(std::string drive_name, double& position_rad)
+bool PlatformDriverEthercat::readJointPositionRad(std::string joint_name, double& position_rad)
 {
-    position_rad = can_drives_[drive_name]->readPositionRad();
+    return joints_.at(joint_name)->readPositionRad(position_rad);
 }
 
-void PlatformDriverEthercat::readDriveVelocityRadSec(std::string drive_name,
+bool PlatformDriverEthercat::readJointVelocityRadSec(std::string joint_name,
                                                      double& velocity_rad_sec)
 {
-    velocity_rad_sec = can_drives_[drive_name]->readVelocityRadSec();
+    return joints_.at(joint_name)->readVelocityRadSec(velocity_rad_sec);
 }
 
-void PlatformDriverEthercat::readDriveTorqueNm(std::string drive_name, double& torque_nm)
+bool PlatformDriverEthercat::readJointTorqueNm(std::string joint_name, double& torque_nm)
 {
-    torque_nm = can_drives_[drive_name]->readTorqueNm();
-}
-
-bool PlatformDriverEthercat::readDriveData(std::string drive_name,
-                                           double& position_rad,
-                                           double& velocity_rad_sec,
-                                           double& current_amp,
-                                           double& torque_nm)
-{
-    auto& drive = can_drives_[drive_name];
-
-    if (!drive->isError())
-    {
-        position_rad = drive->readPositionRad();
-        velocity_rad_sec = drive->readVelocityRadSec();
-        // TODO: Read out current
-        torque_nm = drive->readTorqueNm();
-
-        return true;
-    }
-
-    return false;
-}
-
-void PlatformDriverEthercat::readDriveAnalogInputV(std::string drive_name, double& analog_input_v)
-{
-    analog_input_v = can_drives_[drive_name]->readAnalogInputV();
+    return joints_.at(joint_name)->readTorqueNm(torque_nm);
 }
 
 void PlatformDriverEthercat::readFtsForceN(std::string fts_name, double& fx, double& fy, double& fz)
 {
-    Eigen::Vector3d force = can_fts_[fts_name]->readForceN();
+    Eigen::Vector3d force = can_fts_.at(fts_name)->readForceN();
 
     fx = force[0];
     fy = force[1];
@@ -268,7 +199,7 @@ void PlatformDriverEthercat::readFtsTorqueNm(std::string fts_name,
                                              double& ty,
                                              double& tz)
 {
-    Eigen::Vector3d torque = can_fts_[fts_name]->readTorqueNm();
+    Eigen::Vector3d torque = can_fts_.at(fts_name)->readTorqueNm();
 
     tx = torque[0];
     ty = torque[1];

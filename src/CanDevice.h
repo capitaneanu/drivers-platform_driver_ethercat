@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace platform_driver_ethercat
 {
 
@@ -28,5 +30,4 @@ class CanDevice
     unsigned int slave_id_;
     std::string device_name_;
 };
-
 }

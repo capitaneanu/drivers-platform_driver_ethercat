@@ -252,7 +252,7 @@ void CanOverEthercat::pdoCycle()
                     }
                     else if (ec_slave[slave].state > EC_STATE_NONE)
                     {
-                        // devices_[slave]->configure();
+                        // devices_.at(slave)->configure();
 
                         if (ec_reconfig_slave(slave, EC_TIMEOUTMON))
                         {
