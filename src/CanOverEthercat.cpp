@@ -1,5 +1,6 @@
 #include "CanOverEthercat.h"
 #include "CanDevice.h"
+#include "base-logging/Logging.hpp"
 #include "ethercat.h"
 
 using namespace platform_driver_ethercat;
@@ -25,22 +26,25 @@ bool CanOverEthercat::init()
     /* initialise SOEM, bind socket to ifname */
     if (ec_init(interface_address_.c_str()))
     {
-        printf("ec_init on %s succeeded.\n", interface_address_.c_str());
+        LOG_INFO_S << __PRETTY_FUNCTION__ << ": Initialization on interface "
+                   << interface_address_.c_str() << " succeeded";
         /* find and auto-config slaves */
         if (ec_config_init(FALSE) > 0)
         {
-            printf("%d slaves found.\n", ec_slavecount);
+            LOG_INFO_S << __PRETTY_FUNCTION__ << ": " << ec_slavecount << " slaves found";
 
             if (num_slaves_ != ec_slavecount)
             {
-                printf("Expected number of slaves is different from number of slaves found.\n");
+                LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Expected number of slaves (" << num_slaves_
+                            << ") differs from number of slaves found (" << ec_slavecount << ")";
                 return false;
             }
 
             if (devices_.size() > ec_slavecount)
             {
-                printf("Number of added devices (%d) is greater than number of slaves found.\n",
-                       devices_.size());
+                LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Number of added devices ("
+                            << devices_.size() << ") is greater than number of slaves found ("
+                            << ec_slavecount << ")";
                 return false;
             }
 
@@ -51,7 +55,8 @@ bool CanOverEthercat::init()
 
                 if (slave_id > ec_slavecount)
                 {
-                    printf("Slave id %d outside range.\n", slave_id);
+                    LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Slave id " << slave_id
+                                << " outside range";
                     return false;
                 }
 
@@ -78,14 +83,14 @@ bool CanOverEthercat::init()
                 device.second->setOutputPdo(ec_slave[slave_id].outputs);
             }
 
-            printf("Slaves mapped, state to SAFE_OP.\n");
+            LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Slaves mapped, state to SAFE_OP";
             /* wait for all slaves to reach SAFE_OP state */
             ec_statecheck(0, EC_STATE_SAFE_OP, EC_TIMEOUTSTATE * 4);
 
             expected_wkc_ = (ec_group[0].outputsWKC * 2) + ec_group[0].inputsWKC;
-            printf("Calculated workcounter %d\n", expected_wkc_);
+            LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Calculated workcounter " << expected_wkc_;
 
-            printf("Request operational state for all slaves\n");
+            LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Request operational state for all slaves";
             ec_slave[0].state = EC_STATE_OPERATIONAL;
             /* send one valid process data to make outputs in slaves happy*/
             ec_send_processdata();
@@ -103,7 +108,7 @@ bool CanOverEthercat::init()
 
             if (ec_slave[0].state == EC_STATE_OPERATIONAL)
             {
-                printf("Operational state reached for all slaves.\n");
+                LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Operational state reached for all slaves";
 
                 /* create thread for pdo cycle */
                 // pthread_create(&_thread_handle, NULL, &pdoCycle, NULL);
@@ -114,7 +119,7 @@ bool CanOverEthercat::init()
             }
             else
             {
-                printf("Not all slaves reached operational state.\n");
+                LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Not all slaves reached operational state";
                 is_initialized_ = false;
 
                 ec_readstate();
@@ -123,33 +128,30 @@ bool CanOverEthercat::init()
                 {
                     if (ec_slave[i].state != EC_STATE_OPERATIONAL)
                     {
-                        printf("Slave %d State=0x%2.2x StatusCode=0x%4.4x : %s\n",
-                               i,
-                               ec_slave[i].state,
-                               ec_slave[i].ALstatuscode,
-                               ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
+                        LOG_DEBUG("%s: Slave %d State=0x%2.2x StatusCode=0x%4.4x : %s\n",
+                                  __PRETTY_FUNCTION__,
+                                  i,
+                                  ec_slave[i].state,
+                                  ec_slave[i].ALstatuscode,
+                                  ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
                     }
                 }
 
-                printf("Close socket\n");
-                ec_close();
-
+                close();
                 return false;
             }
         }
         else
         {
-            printf("No slaves found.\n");
-
-            printf("Close socket\n");
-            ec_close();
-
+            LOG_ERROR_S << __PRETTY_FUNCTION__ << ": No slaves found";
+            close();
             return false;
         }
     }
     else
     {
-        printf("ec_init on %s not succeeded.\n", interface_address_.c_str());
+        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Initialization on interface "
+                    << interface_address_.c_str() << " not succeeded";
         return false;
     }
 }
@@ -158,7 +160,7 @@ void CanOverEthercat::close()
 {
     if (isInit())
     {
-        printf("\nRequest init state for all slaves\n");
+        LOG_INFO_S << __PRETTY_FUNCTION__ << ": Request init state for all slaves";
         ec_slave[0].state = EC_STATE_INIT;
         /* request INIT state for all slaves */
         ec_writestate(0);
@@ -170,7 +172,7 @@ void CanOverEthercat::close()
         is_initialized_ = false;
     }
 
-    printf("Close socket\n");
+    LOG_INFO_S << __PRETTY_FUNCTION__ << ": Close socket";
     ec_close();
 }
 
@@ -180,7 +182,8 @@ bool CanOverEthercat::addDevice(std::shared_ptr<CanDevice> device)
 {
     if (isInit())
     {
-        printf("EtherCAT interface already initialized. Drive cannot be added afterwards.\n");
+        LOG_WARN_S << __PRETTY_FUNCTION__
+                   << ": EtherCAT interface already initialized, device cannot be added afterwards";
         return false;
     }
 
@@ -240,13 +243,15 @@ void CanOverEthercat::pdoCycle()
                     ec_group[currentgroup].docheckstate = TRUE;
                     if (ec_slave[slave].state == (EC_STATE_SAFE_OP + EC_STATE_ERROR))
                     {
-                        printf("ERROR : slave %d is in SAFE_OP + ERROR, attempting ack.\n", slave);
+                        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Slave " << slave
+                                    << " is in SAFE_OP + ERROR, attempting ack";
                         ec_slave[slave].state = (EC_STATE_SAFE_OP + EC_STATE_ACK);
                         ec_writestate(slave);
                     }
                     else if (ec_slave[slave].state == EC_STATE_SAFE_OP)
                     {
-                        printf("WARNING : slave %d is in SAFE_OP, change to OPERATIONAL.\n", slave);
+                        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Slave " << slave
+                                   << " is in SAFE_OP, change to OPERATIONAL";
                         ec_slave[slave].state = EC_STATE_OPERATIONAL;
                         ec_writestate(slave);
                     }
@@ -257,7 +262,8 @@ void CanOverEthercat::pdoCycle()
                         if (ec_reconfig_slave(slave, EC_TIMEOUTMON))
                         {
                             ec_slave[slave].islost = FALSE;
-                            printf("MESSAGE : slave %d reconfigured\n", slave);
+                            LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Slave " << slave
+                                        << " reconfigured";
                         }
                     }
                     else if (!ec_slave[slave].islost)
@@ -267,7 +273,7 @@ void CanOverEthercat::pdoCycle()
                         if (ec_slave[slave].state == EC_STATE_NONE)
                         {
                             ec_slave[slave].islost = TRUE;
-                            printf("ERROR : slave %d lost\n", slave);
+                            LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Slave " << slave << " lost";
                         }
                     }
                 }
@@ -278,18 +284,19 @@ void CanOverEthercat::pdoCycle()
                         if (ec_recover_slave(slave, EC_TIMEOUTMON))
                         {
                             ec_slave[slave].islost = FALSE;
-                            printf("MESSAGE : slave %d recovered\n", slave);
+                            LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Slave " << slave
+                                        << " recovered";
                         }
                     }
                     else
                     {
                         ec_slave[slave].islost = FALSE;
-                        printf("MESSAGE : slave %d found\n", slave);
+                        LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Slave " << slave << " found";
                     }
                 }
             }
             if (!ec_group[currentgroup].docheckstate)
-                printf("OK : all slaves resumed OPERATIONAL.\n");
+                LOG_INFO_S << __PRETTY_FUNCTION__ << ": All slaves resumed OPERATIONAL";
         }
 
         osal_usleep(10000);  // roughly 100 Hz
