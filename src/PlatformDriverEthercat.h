@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "CanOverEthercat.h"
+#include "EthercatInterface.h"
 #include "PlatformDriverEthercatTypes.h"
 
 namespace platform_driver_ethercat
@@ -108,6 +108,6 @@ class PlatformDriverEthercat
     std::map<std::string, std::shared_ptr<CanDeviceAtiFts>> can_fts_;
     std::map<std::string, std::unique_ptr<Joint>> joints_;
 
-    CanOverEthercat can_interface_;
+    EthercatInterface ethercat_;
 };
 }

@@ -1,4 +1,4 @@
-#include "CanOverEthercat.h"
+#include "EthercatInterface.h"
 #include "CanDevice.h"
 #include "base-logging/Logging.hpp"
 #include "ethercat.h"
@@ -7,17 +7,18 @@ using namespace platform_driver_ethercat;
 
 const int EC_TIMEOUTMON = 500;
 
-int CanOverEthercat::expected_wkc_ = 0;
-volatile int CanOverEthercat::wkc_ = 0;
+int EthercatInterface::expected_wkc_ = 0;
+volatile int EthercatInterface::wkc_ = 0;
 
-CanOverEthercat::CanOverEthercat(const std::string interface_address, const unsigned int num_slaves)
+EthercatInterface::EthercatInterface(const std::string interface_address,
+                                     const unsigned int num_slaves)
     : interface_address_(interface_address), num_slaves_(num_slaves), is_initialized_(false)
 {
 }
 
-CanOverEthercat::~CanOverEthercat() { close(); }
+EthercatInterface::~EthercatInterface() { close(); }
 
-bool CanOverEthercat::init()
+bool EthercatInterface::init()
 {
     if (isInit()) return true;
 
@@ -112,7 +113,7 @@ bool CanOverEthercat::init()
 
                 /* create thread for pdo cycle */
                 // pthread_create(&_thread_handle, NULL, &pdoCycle, NULL);
-                ethercat_thread_ = std::thread(&CanOverEthercat::pdoCycle, this);
+                ethercat_thread_ = std::thread(&EthercatInterface::pdoCycle, this);
 
                 is_initialized_ = true;
                 return true;
@@ -156,7 +157,7 @@ bool CanOverEthercat::init()
     }
 }
 
-void CanOverEthercat::close()
+void EthercatInterface::close()
 {
     if (isInit())
     {
@@ -176,9 +177,9 @@ void CanOverEthercat::close()
     ec_close();
 }
 
-bool CanOverEthercat::isInit() { return is_initialized_; }
+bool EthercatInterface::isInit() { return is_initialized_; }
 
-bool CanOverEthercat::addDevice(std::shared_ptr<CanDevice> device)
+bool EthercatInterface::addDevice(std::shared_ptr<CanDevice> device)
 {
     if (isInit())
     {
@@ -192,7 +193,7 @@ bool CanOverEthercat::addDevice(std::shared_ptr<CanDevice> device)
     return true;
 }
 
-bool CanOverEthercat::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int* data)
+bool EthercatInterface::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int* data)
 {
     int fieldsize = sizeof(data);
 
@@ -204,7 +205,7 @@ bool CanOverEthercat::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int* da
         return false;
 }
 
-bool CanOverEthercat::sdoWrite(uint16_t slave, uint16_t idx, uint8_t sub, int fieldsize, int data)
+bool EthercatInterface::sdoWrite(uint16_t slave, uint16_t idx, uint8_t sub, int fieldsize, int data)
 {
     int wkc = ec_SDOwrite(slave, idx, sub, FALSE, fieldsize, &data, EC_TIMEOUTRXM);
 
@@ -214,11 +215,14 @@ bool CanOverEthercat::sdoWrite(uint16_t slave, uint16_t idx, uint8_t sub, int fi
         return false;
 }
 
-unsigned char* CanOverEthercat::getInputPdoPtr(uint16_t slave) { return ec_slave[slave].inputs; }
+unsigned char* EthercatInterface::getInputPdoPtr(uint16_t slave) { return ec_slave[slave].inputs; }
 
-unsigned char* CanOverEthercat::getOutputPdoPtr(uint16_t slave) { return ec_slave[slave].outputs; }
+unsigned char* EthercatInterface::getOutputPdoPtr(uint16_t slave)
+{
+    return ec_slave[slave].outputs;
+}
 
-void CanOverEthercat::pdoCycle()
+void EthercatInterface::pdoCycle()
 {
     int currentgroup = 0;
 

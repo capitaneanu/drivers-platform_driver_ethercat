@@ -11,7 +11,7 @@
 
 #include "CanDeviceAtiFts.h"
 #include "CanDriveTwitter.h"
-#include "CanOverEthercat.h"
+#include "EthercatInterface.h"
 #include "JointActive.h"
 #include "JointPassive.h"
 #include "PlatformDriverEthercat.h"
@@ -21,7 +21,7 @@
 using namespace platform_driver_ethercat;
 
 PlatformDriverEthercat::PlatformDriverEthercat(std::string dev_address, unsigned int num_slaves)
-    : can_interface_(dev_address, num_slaves)
+    : ethercat_(dev_address, num_slaves)
 {
 }
 
@@ -31,16 +31,16 @@ void PlatformDriverEthercat::addDriveTwitter(unsigned int slave_id,
                                              std::string name,
                                              DriveConfig config)
 {
-    auto drive = std::make_shared<CanDriveTwitter>(can_interface_, slave_id, name, config);
+    auto drive = std::make_shared<CanDriveTwitter>(ethercat_, slave_id, name, config);
     can_drives_.insert(std::make_pair(drive->getDeviceName(), drive));
-    can_interface_.addDevice(drive);
+    ethercat_.addDevice(drive);
 }
 
 void PlatformDriverEthercat::addAtiFts(unsigned int slave_id, std::string name)
 {
-    auto fts = std::make_shared<CanDeviceAtiFts>(can_interface_, slave_id, name);
+    auto fts = std::make_shared<CanDeviceAtiFts>(ethercat_, slave_id, name);
     can_fts_.insert(std::make_pair(fts->getDeviceName(), fts));
-    can_interface_.addDevice(fts);
+    ethercat_.addDevice(fts);
 }
 
 void PlatformDriverEthercat::addActiveJoint(std::string name, std::string drive, bool enabled)
@@ -59,7 +59,7 @@ bool PlatformDriverEthercat::initPlatform()
 {
     LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Initializing EtherCAT interface";
 
-    if (!can_interface_.init())
+    if (!ethercat_.init())
     {
         LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not initialize EtherCAT interface";
         return false;
@@ -108,7 +108,6 @@ bool PlatformDriverEthercat::startupPlatform()
 
         for (auto& future_tuple : future_tuples)
         {
-            CanDriveTwitter& drive = std::get<0>(future_tuple);
             std::future<bool>& future = std::get<1>(future_tuple);
 
             if (!future.get())

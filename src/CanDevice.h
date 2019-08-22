@@ -5,12 +5,12 @@
 namespace platform_driver_ethercat
 {
 
-class CanOverEthercat;
+class EthercatInterface;
 
 class CanDevice
 {
   public:
-    CanDevice(CanOverEthercat& can_interface, unsigned int slave_id, std::string device_name);
+    CanDevice(EthercatInterface& ethercat, unsigned int slave_id, std::string device_name);
     virtual ~CanDevice() = 0;
 
     virtual bool configure() = 0;
@@ -26,7 +26,7 @@ class CanDevice
     std::string getDeviceName();
 
   protected:
-    CanOverEthercat& can_interface_;
+    EthercatInterface& ethercat_;
     unsigned int slave_id_;
     std::string device_name_;
 };

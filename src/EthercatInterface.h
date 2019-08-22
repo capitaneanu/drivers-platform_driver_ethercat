@@ -10,11 +10,11 @@ namespace platform_driver_ethercat
 
 class CanDevice;
 
-class CanOverEthercat
+class EthercatInterface
 {
   public:
-    CanOverEthercat(const std::string interface_address, const unsigned int num_slaves);
-    ~CanOverEthercat();
+    EthercatInterface(const std::string interface_address, const unsigned int num_slaves);
+    ~EthercatInterface();
     bool init();
     void close();
     bool isInit();

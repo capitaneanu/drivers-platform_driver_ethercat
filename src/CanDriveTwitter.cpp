@@ -2,16 +2,16 @@
 #include <iostream>
 
 #include "CanDriveTwitter.h"
-#include "CanOverEthercat.h"
+#include "EthercatInterface.h"
 #include "base-logging/Logging.hpp"
 
 using namespace platform_driver_ethercat;
 
-CanDriveTwitter::CanDriveTwitter(CanOverEthercat& can_interface,
+CanDriveTwitter::CanDriveTwitter(EthercatInterface& ethercat,
                                  unsigned int slave_id,
                                  std::string device_name,
                                  DriveConfig drive_config)
-    : CanDevice(can_interface, slave_id, device_name),
+    : CanDevice(ethercat, slave_id, device_name),
       drive_param_(drive_config),
       input_(NULL),
       output_(NULL)
@@ -124,7 +124,7 @@ bool CanDriveTwitter::configure()
 
     for (auto sdo_write : sdo_writes)
     {
-        success &= can_interface_.sdoWrite(
+        success &= ethercat_.sdoWrite(
             slave_id_, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
     }
 

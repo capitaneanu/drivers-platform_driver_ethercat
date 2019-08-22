@@ -5,8 +5,8 @@
 
 using namespace platform_driver_ethercat;
 
-CanDevice::CanDevice(CanOverEthercat& can_interface, unsigned int slave_id, std::string device_name)
-    : can_interface_(can_interface), slave_id_(slave_id), device_name_(device_name)
+CanDevice::CanDevice(EthercatInterface& ethercat, unsigned int slave_id, std::string device_name)
+    : ethercat_(ethercat), slave_id_(slave_id), device_name_(device_name)
 {
 }
 

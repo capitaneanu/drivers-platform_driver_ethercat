@@ -16,7 +16,9 @@ class CanDeviceAtiFts : public CanDevice
     /**
      * The constructor
      */
-    CanDeviceAtiFts(CanOverEthercat& can_interface, unsigned int slave_id, std::string device_name);
+    CanDeviceAtiFts(EthercatInterface& ethercat,
+                    unsigned int slave_id,
+                    std::string device_name);
 
     /**
      * The destructor
@@ -104,5 +106,4 @@ class CanDeviceAtiFts : public CanDevice
     Eigen::Vector3d force_bias_;
     Eigen::Vector3d torque_bias_;
 };
-
 }
