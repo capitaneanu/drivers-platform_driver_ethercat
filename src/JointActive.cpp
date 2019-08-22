@@ -93,8 +93,18 @@ bool JointActive::readTempDegC(double& temp_deg_c)
 {
     if (enabled_)
     {
-        // TODO: Convert voltage reading to degree Celsius
-        temp_deg_c = drive_->readAnalogInputV();
+        double Vout = drive_->readAnalogInputV();
+
+        const double alpha = 0.00385;
+        const double V0 = 3.3;
+        const double R0 = 100;
+        const double R1 = 3000;
+        const double R2 = 2000;
+        const double R3 = 200;
+
+        temp_deg_c = 1.0 / alpha * (V0 - (R0 + R1) / R0 * R3 / (R2 + R3) * Vout)
+                     / (-V0 + R3 / (R2 + R3) * Vout);
+
         return true;
     }
     else
