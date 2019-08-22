@@ -31,7 +31,7 @@ class PlatformDriverEthercat
      */
     ~PlatformDriverEthercat();
 
-    void addDriveTwitter(unsigned int slave_id, std::string name, DriveConfig config, bool temp_sensor);
+    void addDriveTwitter(unsigned int slave_id, std::string name, DriveConfig config);
 
     void addAtiFts(unsigned int slave_id, std::string name);
 
@@ -96,6 +96,8 @@ class PlatformDriverEthercat
      * Gets the motor torque (from active current) of a given joint.
      */
     bool readJointTorqueNm(std::string joint_name, double& torque_nm);
+
+    bool readJointTempDegC(std::string joint_name, double& temp_deg_c);
 
     void readFtsForceN(std::string fts_name, double& fx, double& fy, double& fz);
 

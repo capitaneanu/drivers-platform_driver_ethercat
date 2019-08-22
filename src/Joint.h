@@ -22,6 +22,7 @@ class Joint
     virtual bool readPositionRad(double& position_rad) = 0;
     virtual bool readVelocityRadSec(double& velocity_rad_sec) = 0;
     virtual bool readTorqueNm(double& torque_nm) = 0;
+    virtual bool readTempDegC(double& temp_deg_c) = 0;
 
     std::string getName() { return name_; };
     bool isEnabled() { return enabled_; };

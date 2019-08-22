@@ -88,3 +88,18 @@ bool JointActive::readTorqueNm(double& torque_nm)
         return false;
     }
 }
+
+bool JointActive::readTempDegC(double& temp_deg_c)
+{
+    if (enabled_)
+    {
+        // TODO: Convert voltage reading to degree Celsius
+        temp_deg_c = drive_->readAnalogInputV();
+        return true;
+    }
+    else
+    {
+        temp_deg_c = std::numeric_limits<double>::quiet_NaN();
+        return false;
+    }
+}

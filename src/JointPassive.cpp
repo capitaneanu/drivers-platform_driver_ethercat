@@ -49,3 +49,9 @@ bool JointPassive::readTorqueNm(double& torque_nm)
     torque_nm = std::numeric_limits<double>::quiet_NaN();
     return false;
 }
+
+bool JointPassive::readTempDegC(double& temp_deg_c)
+{
+    temp_deg_c = std::numeric_limits<double>::quiet_NaN();
+    return false;
+}

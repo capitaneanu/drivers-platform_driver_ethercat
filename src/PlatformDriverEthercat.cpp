@@ -29,8 +29,7 @@ PlatformDriverEthercat::~PlatformDriverEthercat() {}
 
 void PlatformDriverEthercat::addDriveTwitter(unsigned int slave_id,
                                              std::string name,
-                                             DriveConfig config,
-                                             bool temp_sensor)
+                                             DriveConfig config)
 {
     auto drive = std::make_shared<CanDriveTwitter>(can_interface_, slave_id, name, config);
     can_drives_.insert(std::make_pair(drive->getDeviceName(), drive));
@@ -183,6 +182,11 @@ bool PlatformDriverEthercat::readJointVelocityRadSec(std::string joint_name,
 bool PlatformDriverEthercat::readJointTorqueNm(std::string joint_name, double& torque_nm)
 {
     return joints_.at(joint_name)->readTorqueNm(torque_nm);
+}
+
+bool PlatformDriverEthercat::readJointTempDegC(std::string joint_name, double& temp_deg_c)
+{
+    return joints_.at(joint_name)->readTempDegC(temp_deg_c);
 }
 
 void PlatformDriverEthercat::readFtsForceN(std::string fts_name, double& fx, double& fy, double& fz)

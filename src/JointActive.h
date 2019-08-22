@@ -16,5 +16,6 @@ class JointActive : public Joint
     bool readPositionRad(double& position_rad);
     bool readVelocityRadSec(double& velocity_rad_sec);
     bool readTorqueNm(double& torque_nm);
+    bool readTempDegC(double& temp_deg_c);
 };
 }
