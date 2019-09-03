@@ -99,11 +99,12 @@ bool CanDriveTwitter::configure()
     sdo_writes.push_back(
         SdoWrite{0x6084, 0, 4, (int)drive_param_.getMaxDec()});  // profile deceleration
 
-    // factors (set to 1 to convert units on software side instead of Elmo conversion)
+    // factors (set to 1 to convert units on software side instead of Elmo conversion to avoid
+    // decrease in resolution)
     sdo_writes.push_back(
         SdoWrite{0x608f, 1, 4, 0x00000001});  // position encoder resolution (encoder increments)
     sdo_writes.push_back(
-        SdoWrite{0x608f, 2, 4, 0x00000001});  // position encoder resolution (encoder increments)
+        SdoWrite{0x608f, 2, 4, 0x00000001});  // position encoder resolution (motor increments)
     sdo_writes.push_back(
         SdoWrite{0x6090, 1, 4, 0x00000001});  // velocity encoder resolution (encoder increments)
     sdo_writes.push_back(
@@ -379,9 +380,6 @@ bool CanDriveTwitter::checkSetPointAcknowledge()
 
 double CanDriveTwitter::readPositionRad()
 {
-    // if (device_name_ == "MAST_PAN")
-    //    LOG_DEBUG_S << "Current pos of MAST_PAN: " << input_->actual_position;
-
     return drive_param_.getSign() * drive_param_.PosMotIncrToPosGearRad(input_->actual_position);
 }
 
