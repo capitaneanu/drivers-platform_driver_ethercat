@@ -5,8 +5,6 @@
 
 namespace platform_driver_ethercat
 {
-class CanDriveTwitter;
-
 struct DriveConfig
 {
     int iEncIncrPerRevMot;
