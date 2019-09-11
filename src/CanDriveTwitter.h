@@ -1,5 +1,9 @@
 #pragma once
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
 #include "CanDevice.h"
 #include "PlatformDriverEthercatTypes.h"
 
@@ -268,6 +272,10 @@ class CanDriveTwitter : public CanDevice
     TxPdo* input_;
     RxPdo* output_;
 
+    std::thread command_thread_;
+    std::mutex command_mutex_;
+    std::condition_variable command_cv_;
+
     /**
      * Returns the state of the drive
      */
@@ -283,10 +291,12 @@ class CanDriveTwitter : public CanDevice
     bool checkTargetReached();
 
     /**
-     * Checks if thei trajectory generator has assumed the new
+     * Checks if the trajectory generator has assumed the new
      * positioning value.
      * @return True if the new set point was acknowledged.
      */
     bool checkSetPointAcknowledge();
+
+    void commandSetPoint();
 };
 }

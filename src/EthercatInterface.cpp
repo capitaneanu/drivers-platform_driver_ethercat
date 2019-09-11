@@ -1,5 +1,7 @@
-#include "EthercatInterface.h"
+//#include <chrono>
+
 #include "CanDevice.h"
+#include "EthercatInterface.h"
 #include "base-logging/Logging.hpp"
 #include "ethercat.h"
 
@@ -197,7 +199,16 @@ bool EthercatInterface::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int* 
 {
     int fieldsize = sizeof(data);
 
-    int wkc = ec_SDOread(slave, idx, sub, FALSE, &fieldsize, data, EC_TIMEOUTRXM);
+    int wkc = ec_SDOread(slave, idx, sub, FALSE, &fieldsize, data, EC_TIMEOUTTXM);
+    LOG_DEBUG("%s: Read from slave %d at 0x%04x:%d => wkc: %d; data: 0x%.*x (%d)",
+              __PRETTY_FUNCTION__,
+              slave,
+              idx,
+              sub,
+              wkc,
+              2 * fieldsize,
+              data,
+              data);
 
     if (wkc == 1)
         return true;
@@ -208,6 +219,15 @@ bool EthercatInterface::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int* 
 bool EthercatInterface::sdoWrite(uint16_t slave, uint16_t idx, uint8_t sub, int fieldsize, int data)
 {
     int wkc = ec_SDOwrite(slave, idx, sub, FALSE, fieldsize, &data, EC_TIMEOUTRXM);
+    LOG_DEBUG("%s: Write to slave %d at 0x%04x:%d => wkc: %d; data: 0x%.*x (%d)",
+              __PRETTY_FUNCTION__,
+              slave,
+              idx,
+              sub,
+              wkc,
+              3 * fieldsize,
+              data,
+              data);
 
     if (wkc == 1)
         return true;
@@ -303,6 +323,9 @@ void EthercatInterface::pdoCycle()
                 LOG_INFO_S << __PRETTY_FUNCTION__ << ": All slaves resumed OPERATIONAL";
         }
 
-        osal_usleep(10000);  // roughly 100 Hz
+        //osal_usleep(1000);  // roughly 1000 Hz
+        osal_usleep(5000);  // roughly 200 Hz
+        //osal_usleep(10000);  // roughly 100 Hz
+        //LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count(); 
     }
 }

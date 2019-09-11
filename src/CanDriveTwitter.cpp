@@ -1,7 +1,7 @@
 #include <math.h>
 #include <unistd.h>
+#include <bitset>
 #include <iostream>
-#include <thread>
 
 #include "CanDriveTwitter.h"
 #include "EthercatInterface.h"
@@ -13,7 +13,11 @@ CanDriveTwitter::CanDriveTwitter(EthercatInterface& ethercat,
                                  unsigned int slave_id,
                                  std::string name,
                                  DriveParams params)
-    : CanDevice(ethercat, slave_id, name), params_(params), input_(NULL), output_(NULL)
+    : CanDevice(ethercat, slave_id, name),
+      params_(params),
+      input_(NULL),
+      output_(NULL),
+      command_thread_(&CanDriveTwitter::commandSetPoint, this)
 {
 }
 
@@ -159,7 +163,7 @@ bool CanDriveTwitter::startup()
     LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Starting up drive " << device_name_ << " ...";
 
     DriveState state = readDriveState();
-    int cnt = 100;
+    int cnt = 10000;
 
     while (state != ST_OPERATION_ENABLE)
     {
@@ -183,7 +187,7 @@ bool CanDriveTwitter::startup()
             default: break;
         }
 
-        usleep(100000);  // sleep 0.1 s
+        usleep(1000);  // sleep 0.001 s
         state = readDriveState();
 
         if (cnt-- == 0)
@@ -204,7 +208,7 @@ bool CanDriveTwitter::shutdown()
     LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Shutting down drive " << device_name_ << " ...";
 
     DriveState state = readDriveState();
-    int cnt = 100;
+    int cnt = 1000;
 
     while (state != ST_SWITCH_ON_DISABLED)
     {
@@ -228,7 +232,7 @@ bool CanDriveTwitter::shutdown()
             default: break;
         }
 
-        usleep(10000);  // sleep 0.01 s
+        usleep(1000);  // sleep 0.001 s
         state = readDriveState();
 
         if (cnt-- == 0)
@@ -262,15 +266,15 @@ bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
 
     output_->operation_mode = mode;
 
-    int cnt = 1000;
+    int cnt = 100;
 
     while (current_mode != mode)
     {
         if (cnt-- == 0)
         {
-            LOG_WARN_S << __PRETTY_FUNCTION__ << ": Could not set operation mode for drive "
-                       << device_name_ << ". Current mode is " << current_mode
-                       << ". Requested mode is " << mode << ".";
+            LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not set operation mode for drive "
+                        << device_name_ << ". Current mode is " << current_mode
+                        << ". Requested mode is " << mode << ".";
             return false;
         }
 
@@ -284,44 +288,81 @@ bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
     return true;
 }
 
+void CanDriveTwitter::commandSetPoint()
+{
+    std::unique_lock<std::mutex> lock(command_mutex_);
+
+    while (1)
+    {
+        command_cv_.wait(lock);
+
+        int cnt = 100;
+
+        while (checkSetPointAcknowledge())
+        {
+            if (cnt-- == 0)
+            {
+                LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Drive " << device_name_
+                            << " not ready for new set point";
+                break;
+            }
+
+            usleep(1000);  // sleep 0.001 s
+        }
+
+        output_->control_word |= 0x0030;  // new set point & change set point immediately
+
+        cnt = 100;
+
+        while (!checkSetPointAcknowledge())
+        {
+            //LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << device_name_ << " Position "
+            //           << position_inc << " Time "
+            //           << std::chrono::duration_cast<std::chrono::milliseconds>(
+            //                  std::chrono::system_clock::now().time_since_epoch())
+            //                  .count();
+
+            if (cnt-- == 0)
+            {
+                LOG_ERROR_S << __PRETTY_FUNCTION__ << ": New set point " << output_->target_position
+                            << " was not acknowledged by drive " << device_name_;
+                break;
+            }
+
+            usleep(1000);  // sleep 0.001 s
+        }
+
+        output_->control_word &= 0xffef;  // no new set point
+    }
+}
+
 void CanDriveTwitter::commandPositionRad(double position_rad)
 {
+    std::unique_lock<std::mutex> lock(command_mutex_);
+
     double position_inc = position_rad * (params_.encoder_on_output ? 1.0 : params_.gear_ratio)
                           * params_.encoder_increments / (2.0 * M_PI);
-
     output_->target_position = position_inc;
     commandOperationMode(OM_PROFILE_POSITION);
     // commandOperationMode(OM_CYCSYNC_POSITION);
-    output_->control_word |= 0x0030;  // new set point & change set point immediately
 
-    int cnt = 1000;
-
-    while (!checkSetPointAcknowledge())
-    {
-        usleep(1000);  // sleep 0.001 s
-
-        if (cnt-- == 0)
-        {
-            LOG_INFO_S << __PRETTY_FUNCTION__ << ": New set point " << output_->target_position
-                       << " was not acknowledged for drive " << device_name_;
-            break;
-        }
-    }
-
-    output_->control_word &= 0xffef;  // no new set point
+    command_cv_.notify_one();
 }
 
 void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
 {
+    std::unique_lock<std::mutex> lock(command_mutex_);
+
     double velocity_inc = velocity_rad_sec * (params_.encoder_on_output ? 1.0 : params_.gear_ratio)
                           * params_.encoder_increments / (2.0 * M_PI);
-
     output_->target_velocity = velocity_inc;
     commandOperationMode(OM_PROFILE_VELOCITY);
 }
 
 void CanDriveTwitter::commandTorqueNm(double torque_nm)
 {
+    std::unique_lock<std::mutex> lock(command_mutex_);
+
     double input_torque_nm = torque_nm / params_.gear_ratio;
     output_->target_torque = input_torque_nm * 1000.0 / params_.motor_rated_torque_nm;
     commandOperationMode(OM_PROFILE_TORQUE);
@@ -429,13 +470,13 @@ bool CanDriveTwitter::requestEmergencyStop()
 
     output_->control_word = control_word;
 
-    int cnt = 100;
+    int cnt = 1000;
 
     DriveState state;
 
     do
     {
-        usleep(10000);  // sleep 0.01 s
+        usleep(1000);  // sleep 0.001 s
         state = readDriveState();
 
         if (cnt-- == 0)

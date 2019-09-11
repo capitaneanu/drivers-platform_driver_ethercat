@@ -93,7 +93,7 @@ bool PlatformDriverEthercat::startupPlatform()
         {
             CanDriveTwitter& drive = *drive_iterator->second;
 
-            auto future = std::async(std::launch::async, &CanDriveTwitter::startup, drive);
+            auto future = std::async(std::launch::async, &CanDriveTwitter::startup, &drive);
             auto tuple = std::tuple<CanDriveTwitter&, std::future<bool>>(drive, std::move(future));
 
             future_tuples.push_back(std::move(tuple));
