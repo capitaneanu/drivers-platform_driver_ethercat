@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CanDevice.h"
-#include "DriveParam.h"
+#include "PlatformDriverEthercatTypes.h"
 
 namespace platform_driver_ethercat
 {
@@ -17,8 +17,8 @@ class CanDriveTwitter : public CanDevice
      */
     CanDriveTwitter(EthercatInterface& ethercat,
                     unsigned int slave_id,
-                    std::string device_name,
-                    DriveConfig drive_config);
+                    std::string name,
+                    DriveParams params);
 
     /**
      * The destructor
@@ -263,7 +263,7 @@ class CanDriveTwitter : public CanDevice
         int16_t analog_input;
     } TxPdo;
 
-    DriveParam drive_param_;
+    DriveParams params_;
 
     TxPdo* input_;
     RxPdo* output_;
@@ -272,6 +272,7 @@ class CanDriveTwitter : public CanDevice
      * Returns the state of the drive
      */
     DriveState readDriveState();
+
     OperationMode readOperationMode();
     bool commandOperationMode(OperationMode mode);
 

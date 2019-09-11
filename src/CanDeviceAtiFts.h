@@ -2,7 +2,6 @@
 
 #include <Eigen/Dense>
 #include "CanDevice.h"
-#include "DriveParam.h"
 
 namespace platform_driver_ethercat
 {

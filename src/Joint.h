@@ -15,9 +15,9 @@ class Joint
 
     virtual ~Joint(){};
 
-    virtual bool commandPositionRad(const double position_rad) = 0;
-    virtual bool commandVelocityRadSec(const double velocity_rad_sec) = 0;
-    virtual bool commandTorqueNm(const double torque_nm) = 0;
+    virtual bool commandPositionRad(double position_rad) = 0;
+    virtual bool commandVelocityRadSec(double velocity_rad_sec) = 0;
+    virtual bool commandTorqueNm(double torque_nm) = 0;
 
     virtual bool readPositionRad(double& position_rad) = 0;
     virtual bool readVelocityRadSec(double& velocity_rad_sec) = 0;

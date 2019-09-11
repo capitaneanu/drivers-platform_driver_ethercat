@@ -1,5 +1,7 @@
+#include <math.h>
 #include <unistd.h>
 #include <iostream>
+#include <thread>
 
 #include "CanDriveTwitter.h"
 #include "EthercatInterface.h"
@@ -9,12 +11,9 @@ using namespace platform_driver_ethercat;
 
 CanDriveTwitter::CanDriveTwitter(EthercatInterface& ethercat,
                                  unsigned int slave_id,
-                                 std::string device_name,
-                                 DriveConfig drive_config)
-    : CanDevice(ethercat, slave_id, device_name),
-      drive_param_(drive_config),
-      input_(NULL),
-      output_(NULL)
+                                 std::string name,
+                                 DriveParams params)
+    : CanDevice(ethercat, slave_id, name), params_(params), input_(NULL), output_(NULL)
 {
 }
 
@@ -58,48 +57,49 @@ bool CanDriveTwitter::configure()
     sdo_writes.push_back(
         SdoWrite{0x31d6, 1, 4, 0x41f00000});  // stepper commutation desired current
 
-    // set limits
-    sdo_writes.push_back(SdoWrite{0x6072, 0, 2, 0x0c76});  // max torque (from stall torque)
+    double gear_ratio = params_.gear_ratio;
+    unsigned int encoder_increments = params_.encoder_increments;
+    bool encoder_on_output = params_.encoder_on_output;
 
-    int rated_current = drive_param_.getNominalCurrent() * 1000.0;
-    int max_current;
+    double max_current = (params_.max_motor_current_amp * 1000.0) / params_.motor_rated_current_amp;
+    double rated_current = params_.motor_rated_current_amp * 1000.0;
+    double rated_torque = params_.motor_rated_torque_nm * 1000.0;
+    double min_pos = params_.min_position_deg * encoder_increments / 360.0;
+    double max_pos = params_.max_position_deg * encoder_increments / 360.0;
+    double max_vel = params_.max_motor_speed_rpm * encoder_increments / 60.0;
+    double profile_vel = params_.profile_velocity_rad_sec * encoder_increments / (2.0 * M_PI);
+    double profile_acc =
+        params_.profile_acceleration_rad_sec_sec * encoder_increments / (2.0 * M_PI);
 
-    if (rated_current == 0)
+    if (encoder_on_output)
     {
-        max_current = 1;
+        max_vel /= gear_ratio;
     }
     else
     {
-        max_current = (drive_param_.getCurrMax() * 1000.0 * 1000.0) / rated_current;
+        min_pos *= gear_ratio;
+        max_pos *= gear_ratio;
+        profile_vel *= gear_ratio;
+        profile_acc *= gear_ratio;
     }
 
     sdo_writes.push_back(
-        SdoWrite{0x6073,
-                 0,
-                 2,
-                 max_current});  // max current (from stall current, in thousands of rated current)
-    sdo_writes.push_back(SdoWrite{0x6075, 0, 4, rated_current});  // motor rated current (in mNm)
-    sdo_writes.push_back(SdoWrite{0x6076, 0, 4, 0x0000000b});     // motor rated torque (11 mNm)
-    sdo_writes.push_back(
-        SdoWrite{0x607d, 1, 4, (int)drive_param_.getPosMin()});  // min position limit
-    sdo_writes.push_back(
-        SdoWrite{0x607d, 2, 4, (int)drive_param_.getPosMax()});  // max position limit
-    sdo_writes.push_back(
-        SdoWrite{0x607f, 0, 4, (int)drive_param_.getVelMax()});  // max profile velocity
-    sdo_writes.push_back(
-        SdoWrite{0x60c5, 0, 4, (int)drive_param_.getMaxAcc()});  // max acceleration
-    sdo_writes.push_back(
-        SdoWrite{0x60c6, 0, 4, (int)drive_param_.getMaxDec()});  // max deceleration
+        SdoWrite{0x6073, 0, 2, (int)max_current});  // max current (thousands of rated current)
+    sdo_writes.push_back(SdoWrite{0x6075, 0, 4, (int)rated_current});  // motor rated current (mA)
+    sdo_writes.push_back(SdoWrite{0x6076, 0, 4, (int)rated_torque});   // motor rated torque (mNm)
+    sdo_writes.push_back(SdoWrite{0x607b, 1, 4, (int)min_pos});  // min position range limit (inc)
+    sdo_writes.push_back(SdoWrite{0x607b, 2, 4, (int)max_pos});  // max position range limit (inc)
+    sdo_writes.push_back(SdoWrite{0x607d, 1, 4, (int)min_pos});  // min position limit (inc)
+    sdo_writes.push_back(SdoWrite{0x607d, 2, 4, (int)max_pos});  // max position limit (inc)
+    sdo_writes.push_back(SdoWrite{0x607f, 0, 4, (int)max_vel});  // max profile velocity
+    sdo_writes.push_back(SdoWrite{0x6080, 0, 4, (int)max_vel});  // max motor speed
 
     // set profile motion parameters
-    sdo_writes.push_back(
-        SdoWrite{0x6081, 0, 4, (int)drive_param_.getPtpVelDefault()});  // profile velocity
-    sdo_writes.push_back(
-        SdoWrite{0x6083, 0, 4, (int)drive_param_.getMaxAcc()});  // profile acceleration
-    sdo_writes.push_back(
-        SdoWrite{0x6084, 0, 4, (int)drive_param_.getMaxDec()});  // profile deceleration
+    sdo_writes.push_back(SdoWrite{0x6081, 0, 4, (int)profile_vel});  // profile velocity
+    sdo_writes.push_back(SdoWrite{0x6083, 0, 4, (int)profile_acc});  // profile acceleration
+    sdo_writes.push_back(SdoWrite{0x6084, 0, 4, (int)profile_acc});  // profile deceleration
 
-    // factors (set to 1 to convert units on software side instead of Elmo conversion to avoid
+    // factors (set to 2 to convert units on software side instead of Elmo conversion to avoid
     // decrease in resolution)
     sdo_writes.push_back(
         SdoWrite{0x608f, 1, 4, 0x00000001});  // position encoder resolution (encoder increments)
@@ -108,7 +108,7 @@ bool CanDriveTwitter::configure()
     sdo_writes.push_back(
         SdoWrite{0x6090, 1, 4, 0x00000001});  // velocity encoder resolution (encoder increments)
     sdo_writes.push_back(
-        SdoWrite{0x6090, 2, 4, 0x00000001});  // velocity encoder resolution (motor revolutions)
+        SdoWrite{0x6090, 2, 4, 0x00000001});  // velocity encoder resolution (motor increments)
     sdo_writes.push_back(
         SdoWrite{0x6091, 1, 4, 0x00000001});  // gear ratio (motor shaft revolutions)
     sdo_writes.push_back(
@@ -286,18 +286,10 @@ bool CanDriveTwitter::commandOperationMode(CanDriveTwitter::OperationMode mode)
 
 void CanDriveTwitter::commandPositionRad(double position_rad)
 {
-    int max_pos = drive_param_.getPosMax();
-    int min_pos = drive_param_.getPosMin();
-    int target_pos = drive_param_.getSign() * drive_param_.PosGearRadToPosMotIncr(position_rad);
-    int target_pos_limited = std::min(max_pos, std::max(min_pos, target_pos));
+    double position_inc = position_rad * (params_.encoder_on_output ? 1.0 : params_.gear_ratio)
+                          * params_.encoder_increments / (2.0 * M_PI);
 
-    if (target_pos != target_pos_limited)
-    {
-        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Command exceeds position limit for drive "
-                   << device_name_;
-    }
-
-    output_->target_position = target_pos_limited;
+    output_->target_position = position_inc;
     commandOperationMode(OM_PROFILE_POSITION);
     // commandOperationMode(OM_CYCSYNC_POSITION);
     output_->control_word |= 0x0030;  // new set point & change set point immediately
@@ -317,51 +309,22 @@ void CanDriveTwitter::commandPositionRad(double position_rad)
     }
 
     output_->control_word &= 0xffef;  // no new set point
-
-    // LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive: " << device_name_ << " Current position: " <<
-    // input_->actual_position << " Target position: " << output_->target_position;
 }
 
 void CanDriveTwitter::commandVelocityRadSec(double velocity_rad_sec)
 {
-    int max_vel = drive_param_.getVelMax();
-    int target_vel =
-        drive_param_.getSign() * drive_param_.VelGearRadSToVelMotIncrPeriod(velocity_rad_sec);
-    int target_vel_limited = std::min(max_vel, std::max(-max_vel, target_vel));
+    double velocity_inc = velocity_rad_sec * (params_.encoder_on_output ? 1.0 : params_.gear_ratio)
+                          * params_.encoder_increments / (2.0 * M_PI);
 
-    if (target_vel != target_vel_limited)
-    {
-        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Command exceeds velocity limit for drive "
-                   << device_name_;
-    }
-
-    int current_pos = input_->actual_position;
-    int max_pos = drive_param_.getPosMax();
-    int min_pos = drive_param_.getPosMin();
-    int target_vel_poslimited = target_vel_limited;
-
-    if (current_pos >= max_pos)
-        target_vel_poslimited = std::min(0, target_vel_limited);
-    else if (current_pos <= min_pos)
-        target_vel_poslimited = std::max(0, target_vel_limited);
-
-    if (target_vel_limited != target_vel_poslimited)
-    {
-        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Position limit reached for drive " << device_name_;
-    }
-
-    output_->target_velocity = target_vel_poslimited;
+    output_->target_velocity = velocity_inc;
     commandOperationMode(OM_PROFILE_VELOCITY);
 }
 
 void CanDriveTwitter::commandTorqueNm(double torque_nm)
 {
+    double input_torque_nm = torque_nm / params_.gear_ratio;
+    output_->target_torque = input_torque_nm * 1000.0 / params_.motor_rated_torque_nm;
     commandOperationMode(OM_PROFILE_TORQUE);
-
-    int rated_torque = 11;  // 11 mNm
-
-    // TODO: transform from load to motor torque
-    output_->target_torque = drive_param_.getSign() * torque_nm * 1000 * 1000 / rated_torque;
 }
 
 bool CanDriveTwitter::checkTargetReached()
@@ -380,21 +343,30 @@ bool CanDriveTwitter::checkSetPointAcknowledge()
 
 double CanDriveTwitter::readPositionRad()
 {
-    return drive_param_.getSign() * drive_param_.PosMotIncrToPosGearRad(input_->actual_position);
+    double position_inc = input_->actual_position;
+    double position_rad =
+        position_inc * 2.0 * M_PI
+        / ((params_.encoder_on_output ? 1.0 : params_.gear_ratio) * params_.encoder_increments);
+
+    return position_rad;
 }
 
 double CanDriveTwitter::readVelocityRadSec()
 {
-    return drive_param_.getSign()
-           * drive_param_.VelMotIncrPeriodToVelGearRadS(input_->actual_velocity);
+    double velocity_inc = input_->actual_velocity;
+    double velocity_rad_sec =
+        velocity_inc * 2.0 * M_PI
+        / ((params_.encoder_on_output ? 1.0 : params_.gear_ratio) * params_.encoder_increments);
+
+    return velocity_rad_sec;
 }
 
 double CanDriveTwitter::readTorqueNm()
 {
-    int rated_torque = 11;  // 11 mNm
+    double input_torque_nm = input_->actual_torque * params_.motor_rated_torque_nm / 1000.0;
+    double output_torque_nm = input_torque_nm * params_.gear_ratio;
 
-    // TODO: transform from motor to load torque
-    return drive_param_.getSign() * input_->actual_torque * rated_torque / (1000 * 1000);
+    return output_torque_nm;
 }
 
 double CanDriveTwitter::readAnalogInputV() { return input_->analog_input * 1.0 / 1000.0; }

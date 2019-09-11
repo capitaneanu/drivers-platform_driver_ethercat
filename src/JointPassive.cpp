@@ -8,11 +8,11 @@ using namespace platform_driver_ethercat;
 JointPassive::JointPassive(std::string name, std::shared_ptr<CanDriveTwitter>& drive, bool enabled)
     : Joint(name, drive, enabled){};
 
-bool JointPassive::commandPositionRad(const double position_rad) { return false; }
+bool JointPassive::commandPositionRad(double position_rad) { return false; }
 
-bool JointPassive::commandVelocityRadSec(const double velocity_rad_sec) { return false; }
+bool JointPassive::commandVelocityRadSec(double velocity_rad_sec) { return false; }
 
-bool JointPassive::commandTorqueNm(const double torque_nm) { return false; }
+bool JointPassive::commandTorqueNm(double torque_nm) { return false; }
 
 bool JointPassive::readPositionRad(double& position_rad)
 {

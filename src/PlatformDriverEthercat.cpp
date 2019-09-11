@@ -29,9 +29,9 @@ PlatformDriverEthercat::~PlatformDriverEthercat() {}
 
 void PlatformDriverEthercat::addDriveTwitter(unsigned int slave_id,
                                              std::string name,
-                                             DriveConfig config)
+                                             DriveParams params)
 {
-    auto drive = std::make_shared<CanDriveTwitter>(ethercat_, slave_id, name, config);
+    auto drive = std::make_shared<CanDriveTwitter>(ethercat_, slave_id, name, params);
     can_drives_.insert(std::make_pair(drive->getDeviceName(), drive));
     ethercat_.addDevice(drive);
 }
@@ -43,9 +43,13 @@ void PlatformDriverEthercat::addAtiFts(unsigned int slave_id, std::string name)
     ethercat_.addDevice(fts);
 }
 
-void PlatformDriverEthercat::addActiveJoint(std::string name, std::string drive, bool enabled)
+void PlatformDriverEthercat::addActiveJoint(std::string name,
+                                            std::string drive,
+                                            ActiveJointParams params,
+                                            bool enabled)
 {
-    std::unique_ptr<JointActive> joint(new JointActive(name, can_drives_.at(drive), enabled));
+    std::unique_ptr<JointActive> joint(
+        new JointActive(name, can_drives_.at(drive), params, enabled));
     joints_.insert(std::make_pair(joint->getName(), std::move(joint)));
 }
 
@@ -78,8 +82,6 @@ bool PlatformDriverEthercat::initPlatform()
 bool PlatformDriverEthercat::startupPlatform()
 {
     // Start all drives in groups of 6
-    unsigned int i = 0;
-
     auto drive_iterator = can_drives_.begin();
     while (drive_iterator != can_drives_.end())
     {

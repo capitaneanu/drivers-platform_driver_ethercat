@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -31,11 +32,14 @@ class PlatformDriverEthercat
      */
     ~PlatformDriverEthercat();
 
-    void addDriveTwitter(unsigned int slave_id, std::string name, DriveConfig config);
+    void addDriveTwitter(unsigned int slave_id, std::string name, DriveParams params);
 
     void addAtiFts(unsigned int slave_id, std::string name);
 
-    void addActiveJoint(std::string name, std::string drive, bool enabled);
+    void addActiveJoint(std::string name,
+                        std::string drive,
+                        ActiveJointParams params,
+                        bool enabled);
 
     void addPassiveJoint(std::string name, std::string drive, bool enabled);
 
