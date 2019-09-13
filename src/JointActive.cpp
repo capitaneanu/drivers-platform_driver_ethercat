@@ -80,7 +80,10 @@ bool JointActive::commandVelocityRadSec(double velocity_rad_sec)
         LOG_WARN_S << __PRETTY_FUNCTION__ << ": Position limit reached for joint " << name_;
     }
 
-    if (params_.flip_sign) velocity_rad_sec *= -1.0;
+    if (params_.flip_sign)
+    {
+        velocity_rad_sec *= -1.0;
+    }
 
     drive_->commandVelocityRadSec(velocity_rad_sec);
 
@@ -104,7 +107,10 @@ bool JointActive::commandTorqueNm(double torque_nm)
         LOG_WARN_S << __PRETTY_FUNCTION__ << ": Command exceeds torque limit for joint " << name_;
     }
 
-    if (params_.flip_sign) torque_nm *= -1.0;
+    if (params_.flip_sign)
+    {
+        torque_nm *= -1.0;
+    }
 
     drive_->commandTorqueNm(torque_nm);
 
@@ -116,6 +122,7 @@ bool JointActive::readPositionRad(double& position_rad)
     if (enabled_)
     {
         position_rad = drive_->readPositionRad();
+        if (params_.flip_sign) position_rad *= -1.0;
         return true;
     }
     else
@@ -130,6 +137,7 @@ bool JointActive::readVelocityRadSec(double& velocity_rad_sec)
     if (enabled_)
     {
         velocity_rad_sec = drive_->readVelocityRadSec();
+        if (params_.flip_sign) velocity_rad_sec *= -1.0;
         return true;
     }
     else
@@ -144,6 +152,7 @@ bool JointActive::readTorqueNm(double& torque_nm)
     if (enabled_)
     {
         torque_nm = drive_->readTorqueNm();
+        if (params_.flip_sign) torque_nm *= -1.0;
         return true;
     }
     else
