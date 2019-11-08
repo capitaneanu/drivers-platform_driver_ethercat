@@ -48,15 +48,17 @@ void PlatformDriverEthercat::addActiveJoint(std::string name,
                                             ActiveJointParams params,
                                             bool enabled)
 {
-    std::unique_ptr<JointActive> joint(
+    std::shared_ptr<JointActive> joint(
         new JointActive(name, can_drives_.at(drive), params, enabled));
-    joints_.insert(std::make_pair(joint->getName(), std::move(joint)));
+    joints_.insert(std::make_pair(joint->getName(), joint));
+    active_joints_.insert(std::make_pair(joint->getName(), joint));
 }
 
 void PlatformDriverEthercat::addPassiveJoint(std::string name, std::string drive, bool enabled)
 {
-    std::unique_ptr<JointPassive> joint(new JointPassive(name, can_drives_.at(drive), enabled));
-    joints_.insert(std::make_pair(joint->getName(), std::move(joint)));
+    std::shared_ptr<JointPassive> joint(new JointPassive(name, can_drives_.at(drive), enabled));
+    joints_.insert(std::make_pair(joint->getName(), joint));
+    passive_joints_.insert(std::make_pair(joint->getName(), joint));
 }
 
 bool PlatformDriverEthercat::initPlatform()
@@ -81,9 +83,9 @@ bool PlatformDriverEthercat::initPlatform()
 
 bool PlatformDriverEthercat::startupPlatform()
 {
-    // Start all drives in groups of 6
-    auto drive_iterator = can_drives_.begin();
-    while (drive_iterator != can_drives_.end())
+    // Start all drives for enabled active joints in groups of 6
+    auto joint_iterator = active_joints_.begin();
+    while (joint_iterator != active_joints_.end())
     {
         std::vector<std::tuple<CanDriveTwitter&, std::future<bool>>> future_tuples;
 
@@ -91,18 +93,24 @@ bool PlatformDriverEthercat::startupPlatform()
 
         while (j < 6)
         {
-            CanDriveTwitter& drive = *drive_iterator->second;
+            auto active_joint = joint_iterator->second;
 
-            auto future = std::async(std::launch::async, &CanDriveTwitter::startup, &drive);
-            auto tuple = std::tuple<CanDriveTwitter&, std::future<bool>>(drive, std::move(future));
+            if (active_joint->isEnabled())
+            {
+                CanDriveTwitter& drive = *(active_joint->getDrive());
 
-            future_tuples.push_back(std::move(tuple));
+                auto future = std::async(std::launch::async, &CanDriveTwitter::startup, &drive);
+                auto tuple =
+                    std::tuple<CanDriveTwitter&, std::future<bool>>(drive, std::move(future));
 
-            j++;
+                future_tuples.push_back(std::move(tuple));
 
-            drive_iterator++;
+                j++;
+            }
 
-            if (drive_iterator == can_drives_.end())
+            joint_iterator++;
+
+            if (joint_iterator == active_joints_.end())
             {
                 break;
             }

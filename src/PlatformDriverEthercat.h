@@ -13,6 +13,8 @@ namespace platform_driver_ethercat
 class CanDeviceAtiFts;
 class CanDriveTwitter;
 class Joint;
+class JointActive;
+class JointPassive;
 
 /**
  * Represents and Controls all Drive components on an arbitrary platform.
@@ -110,7 +112,9 @@ class PlatformDriverEthercat
   private:
     std::map<std::string, std::shared_ptr<CanDriveTwitter>> can_drives_;
     std::map<std::string, std::shared_ptr<CanDeviceAtiFts>> can_fts_;
-    std::map<std::string, std::unique_ptr<Joint>> joints_;
+    std::map<std::string, std::shared_ptr<Joint>> joints_;
+    std::map<std::string, std::shared_ptr<JointActive>> active_joints_;
+    std::map<std::string, std::shared_ptr<JointPassive>> passive_joints_;
 
     EthercatInterface ethercat_;
 };

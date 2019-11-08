@@ -25,6 +25,7 @@ class Joint
     virtual bool readTempDegC(double& temp_deg_c) = 0;
 
     std::string getName() { return name_; };
+    std::shared_ptr<CanDriveTwitter> getDrive() { return drive_; };
     bool isEnabled() { return enabled_; };
 
   protected:
