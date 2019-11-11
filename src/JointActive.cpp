@@ -176,7 +176,7 @@ bool JointActive::readTempDegC(double& temp_deg_c)
         const double R3 = 200;
 
         temp_deg_c = 1.0 / alpha * (V0 - (R0 + R1) / R0 * R3 / (R2 + R3) * Vout)
-                     / (-V0 + R3 / (R2 + R3) * Vout);
+                     / (-V0 + R3 / (R2 + R3) * Vout) - params_.temp_offset_deg_c;
 
         return true;
     }

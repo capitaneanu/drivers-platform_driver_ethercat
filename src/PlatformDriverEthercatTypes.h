@@ -27,5 +27,6 @@ struct ActiveJointParams
     double max_position_command_rad;
     double max_velocity_command_rad_sec;
     double max_torque_command_nm;
+    double temp_offset_deg_c;
 };
 }
