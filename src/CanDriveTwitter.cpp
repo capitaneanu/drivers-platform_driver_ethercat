@@ -44,7 +44,7 @@ bool CanDriveTwitter::configure()
     sdo_writes.push_back(SdoWrite{0x1c12, 3, 2, 0x160f});  // target position
     sdo_writes.push_back(SdoWrite{0x1c12, 4, 2, 0x161c});  // target velocity
     sdo_writes.push_back(SdoWrite{0x1c12, 5, 2, 0x160c});  // target torque
-    sdo_writes.push_back(SdoWrite{0x1c12, 0, 1, 0x05});    // enable
+    sdo_writes.push_back(SdoWrite{0x1c12, 0, 1, 0x05});    // enable five entries
 
     // set TxPDO map
     sdo_writes.push_back(SdoWrite{0x1c13, 0, 1, 0x00});    // disable
@@ -54,7 +54,8 @@ bool CanDriveTwitter::configure()
     sdo_writes.push_back(SdoWrite{0x1c13, 4, 2, 0x1a11});  // actual velocity
     sdo_writes.push_back(SdoWrite{0x1c13, 5, 2, 0x1a13});  // actual torque
     sdo_writes.push_back(SdoWrite{0x1c13, 6, 2, 0x1a1d});  // analog input
-    sdo_writes.push_back(SdoWrite{0x1c13, 0, 1, 0x06});    // enable
+    sdo_writes.push_back(SdoWrite{0x1c13, 7, 2, 0x1a1e});  // auxiliary position actual value
+    sdo_writes.push_back(SdoWrite{0x1c13, 0, 1, 0x07});    // enable seven entries
 
     // set commutation
     sdo_writes.push_back(SdoWrite{0x3034, 17, 4, 0x00000003});  // commutation method
@@ -316,7 +317,7 @@ void CanDriveTwitter::commandSetPoint()
 
         while (!checkSetPointAcknowledge())
         {
-            //LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << device_name_ << " Position "
+            // LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Drive " << device_name_ << " Position "
             //           << position_inc << " Time "
             //           << std::chrono::duration_cast<std::chrono::milliseconds>(
             //                  std::chrono::system_clock::now().time_since_epoch())
@@ -411,6 +412,11 @@ double CanDriveTwitter::readTorqueNm()
 }
 
 double CanDriveTwitter::readAnalogInputV() { return input_->analog_input * 1.0 / 1000.0; }
+
+double CanDriveTwitter::readAuxiliaryPositionRad()
+{
+    return input_->auxiliary_position * 2.0 * M_PI / 4096.0;
+}
 
 CanDriveTwitter::DriveState CanDriveTwitter::readDriveState()
 {

@@ -76,26 +76,33 @@ class CanDriveTwitter : public CanDevice
 
     /**
      * Reads the last received value of the drive position.
-     * @return The value of the current position of the motor.
+     * @return The value of the current position of the motor in radians.
      */
     double readPositionRad();
 
     /**
      * Reads the last received value of the drive Velocity.
-     * @return The value of the current Velocity of the motor.
+     * @return The value of the current velocity of the motor in radians per second.
      */
     double readVelocityRadSec();
 
     /**
      * Reads the last received value of the motor Torque.
-     * @return The value (in Nm) of the current motor torque is stored in this pointer.
+     * @return The value (in Nm) of the current motor torque.
      */
     double readTorqueNm();
 
     /**
-     * Returns received value from analog input.
+     * Returns the last received value from the analog input.
+     * @return The analog input value in V.
      */
     double readAnalogInputV();
+
+    /**
+     * Returns the last received value from the auxiliary position.
+     * Returns The auxiliary position value in radians.
+     */
+    double readAuxiliaryPositionRad();
 
     /**
      * Returns true if an error has been detected.
@@ -265,6 +272,7 @@ class CanDriveTwitter : public CanDevice
         int32_t actual_velocity;
         int16_t actual_torque;
         int16_t analog_input;
+        int32_t auxiliary_position;
     } TxPdo;
 
     DriveParams params_;
