@@ -18,8 +18,7 @@ bool JointPassive::readPositionRad(double& position_rad)
 {
     if (enabled_)
     {
-        // TODO
-        position_rad = 0.0;
+        position_rad = drive_->readAuxiliaryPositionRad();
         return true;
     }
     else
