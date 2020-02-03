@@ -1,7 +1,10 @@
 #include <iostream>
 
 #include "CanDevice.h"
-#include "base-logging/Logging.hpp"
+#include "Logging.hpp"
+#include <sstream>
+static std::stringstream ss;
+static char cbuf[1024];
 
 using namespace platform_driver_ethercat;
 

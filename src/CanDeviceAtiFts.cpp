@@ -2,7 +2,10 @@
 
 #include "CanDeviceAtiFts.h"
 #include "EthercatInterface.h"
-#include "base-logging/Logging.hpp"
+#include "Logging.hpp"
+#include <sstream>
+static std::stringstream ss;
+static char cbuf[1024];
 
 using namespace platform_driver_ethercat;
 
@@ -54,7 +57,9 @@ CanDeviceAtiFts::~CanDeviceAtiFts() {}
 
 bool CanDeviceAtiFts::configure()
 {
-    LOG_DEBUG_S << "Configuring device " << device_name_ << " ...";
+    ss << "Configuring device " << device_name_ << " ...";
+    log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+    ss.str(""); ss.clear();
 
     typedef struct SdoWrite
     {
@@ -82,8 +87,12 @@ bool CanDeviceAtiFts::configure()
     success &= ethercat_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x29, &force_unit);
     success &= ethercat_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x2a, &torque_unit);
 
-    LOG_DEBUG_S << "Force unit of sensor " << device_name_ << " is " << force_unit;
-    LOG_DEBUG_S << "Torque unit of sensor " << device_name_ << " is " << torque_unit;
+    ss << "Force unit of sensor " << device_name_ << " is " << force_unit;
+    log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+    ss.str(""); ss.clear();
+    ss << "Torque unit of sensor " << device_name_ << " is " << torque_unit;
+    log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+    ss.str(""); ss.clear();
 
     success &=
         ethercat_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x31, &counts_per_force_);
@@ -92,12 +101,16 @@ bool CanDeviceAtiFts::configure()
 
     if (success)
     {
-        LOG_INFO_S << "Device " << device_name_ << " configured";
+        ss << "Device " << device_name_ << " configured";
+        log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str().c_str());
+        ss.str(""); ss.clear();
         return true;
     }
     else
     {
-        LOG_ERROR_S << "Failed to configure device " << device_name_;
+        ss << "Failed to configure device " << device_name_;
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+        ss.str(""); ss.clear();
         return false;
     }
 }

@@ -16,7 +16,10 @@
 #include "JointPassive.h"
 #include "PlatformDriverEthercat.h"
 
-#include <base-logging/Logging.hpp>
+#include "Logging.hpp"
+#include <sstream>
+static std::stringstream ss;
+static char cbuf[1024];
 
 using namespace platform_driver_ethercat;
 
@@ -63,21 +66,29 @@ void PlatformDriverEthercat::addPassiveJoint(std::string name, std::string drive
 
 bool PlatformDriverEthercat::initPlatform()
 {
-    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Initializing EtherCAT interface";
+    ss << ": Initializing EtherCAT interface";
+    log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+    ss.str(""); ss.clear();
 
     if (!ethercat_.init())
     {
-        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not initialize EtherCAT interface";
+        ss << ": Could not initialize EtherCAT interface";
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+        ss.str(""); ss.clear();
         return false;
     }
 
     if (!startupPlatform())
     {
-        LOG_ERROR_S << __PRETTY_FUNCTION__ << ": Could not start up drives";
+        ss << ": Could not start up drives";
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+        ss.str(""); ss.clear();
         return false;
     }
 
-    LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": Platform init success";
+    ss << ": Platform init success";
+    log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+    ss.str(""); ss.clear();
     return true;
 }
 
@@ -152,7 +163,9 @@ bool PlatformDriverEthercat::resetPlatform()
 
         if (!bRetMotor)
         {
-            LOG_ERROR_S << "Resetting of Motor " << drive.second->getDeviceName() << " failed";
+            ss << "Resetting of Motor " << drive.second->getDeviceName() << " failed";
+            log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+            ss.str(""); ss.clear();
         }
 
         bRet &= bRetMotor;

@@ -3,7 +3,10 @@
 
 #include "CanDriveTwitter.h"
 #include "JointActive.h"
-#include "base-logging/Logging.hpp"
+#include "Logging.hpp"
+#include <sstream>
+static std::stringstream ss;
+static char cbuf[1024];
 
 using namespace platform_driver_ethercat;
 
@@ -29,7 +32,9 @@ bool JointActive::commandPositionRad(double position_rad)
 
     if (position_rad != position_old)
     {
-        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Command exceeds position limit for joint " << name_;
+        ss << ": Command exceeds position limit for joint " << name_;
+        log(LogLevel::WARN, __PRETTY_FUNCTION__, ss.str().c_str());
+        ss.str(""); ss.clear();
     }
 
     if (params_.flip_sign)
@@ -56,7 +61,9 @@ bool JointActive::commandVelocityRadSec(double velocity_rad_sec)
 
     if (velocity_rad_sec != velocity_old)
     {
-        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Command exceeds velocity limit for joint " << name_;
+        ss << ": Command exceeds velocity limit for joint " << name_;
+        log(LogLevel::WARN, __PRETTY_FUNCTION__, ss.str().c_str());
+        ss.str(""); ss.clear();
     }
 
     double current_pos;
@@ -77,7 +84,9 @@ bool JointActive::commandVelocityRadSec(double velocity_rad_sec)
 
     if (velocity_rad_sec != velocity_old)
     {
-        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Position limit reached for joint " << name_;
+        ss << ": Position limit reached for joint " << name_;
+        log(LogLevel::WARN, __PRETTY_FUNCTION__, ss.str().c_str());
+        ss.str(""); ss.clear();
     }
 
     if (params_.flip_sign)
@@ -104,7 +113,9 @@ bool JointActive::commandTorqueNm(double torque_nm)
 
     if (torque_nm != torque_old)
     {
-        LOG_WARN_S << __PRETTY_FUNCTION__ << ": Command exceeds torque limit for joint " << name_;
+        ss << ": Command exceeds torque limit for joint " << name_;
+        log(LogLevel::WARN, __PRETTY_FUNCTION__, ss.str().c_str());
+        ss.str(""); ss.clear();
     }
 
     if (params_.flip_sign)
