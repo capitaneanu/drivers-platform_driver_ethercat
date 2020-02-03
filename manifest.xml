@@ -1,8 +1,8 @@
 <package>
-  <description brief="Driver for all platform motors">
-  This library interfaces with all the motors in the platform implementing the CANopen protocol.
+  <description brief="Elmo Drive and FTS communication over EtherCAT">
+  Library for Elmo Gold Twitter and ATI Force Torque Sensor communication via CANopen over EtherCAT
   </description>
-  <author>Martin Azkarate/Martin.Azkarate@esa.int</author>
+  <author>Tim Wiese/tim.wiese@esa.int</author>
   <license>GPL v2 or later</license>
   <url>http://www.esa.int/TEC/Robotics/</url>
   <logo>http://</logo>
