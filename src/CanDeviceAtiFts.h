@@ -15,7 +15,7 @@ class CanDeviceAtiFts : public CanDevice
     /**
      * The constructor
      */
-    CanDeviceAtiFts(EthercatInterface& ethercat,
+    CanDeviceAtiFts(std::shared_ptr<EthercatInterface> ethercat,
                     unsigned int slave_id,
                     std::string device_name);
 

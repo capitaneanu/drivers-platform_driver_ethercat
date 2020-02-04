@@ -24,7 +24,7 @@ static char cbuf[1024];
 using namespace platform_driver_ethercat;
 
 PlatformDriverEthercat::PlatformDriverEthercat(std::string dev_address, unsigned int num_slaves)
-    : ethercat_(dev_address, num_slaves)
+    : ethercat_(new EthercatInterface(dev_address, num_slaves))
 {
 }
 
@@ -36,14 +36,14 @@ void PlatformDriverEthercat::addDriveTwitter(unsigned int slave_id,
 {
     auto drive = std::make_shared<CanDriveTwitter>(ethercat_, slave_id, name, params);
     can_drives_.insert(std::make_pair(drive->getDeviceName(), drive));
-    ethercat_.addDevice(drive);
+    ethercat_->addDevice(drive);
 }
 
 void PlatformDriverEthercat::addAtiFts(unsigned int slave_id, std::string name)
 {
     auto fts = std::make_shared<CanDeviceAtiFts>(ethercat_, slave_id, name);
     can_fts_.insert(std::make_pair(fts->getDeviceName(), fts));
-    ethercat_.addDevice(fts);
+    ethercat_->addDevice(fts);
 }
 
 void PlatformDriverEthercat::addActiveJoint(std::string name,
@@ -70,7 +70,7 @@ bool PlatformDriverEthercat::initPlatform()
     log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
     ss.str(""); ss.clear();
 
-    if (!ethercat_.init())
+    if (!ethercat_->init())
     {
         ss << ": Could not initialize EtherCAT interface";
         log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());

@@ -8,8 +8,8 @@ static char cbuf[1024];
 
 using namespace platform_driver_ethercat;
 
-CanDevice::CanDevice(EthercatInterface& ethercat, unsigned int slave_id, std::string device_name)
-    : ethercat_(ethercat), slave_id_(slave_id), device_name_(device_name)
+CanDevice::CanDevice(std::shared_ptr<EthercatInterface> ethercat, unsigned int slave_id, std::string device_name)
+    : ethercat_(std::move(ethercat)), slave_id_(slave_id), device_name_(device_name)
 {
 }
 

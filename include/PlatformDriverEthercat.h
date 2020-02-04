@@ -4,7 +4,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "EthercatInterface.h"
 #include "PlatformDriverEthercatTypes.h"
 
 namespace platform_driver_ethercat
@@ -12,6 +11,7 @@ namespace platform_driver_ethercat
 
 class CanDeviceAtiFts;
 class CanDriveTwitter;
+class EthercatInterface;
 class Joint;
 class JointActive;
 class JointPassive;
@@ -116,6 +116,6 @@ class PlatformDriverEthercat
     std::map<std::string, std::shared_ptr<JointActive>> active_joints_;
     std::map<std::string, std::shared_ptr<JointPassive>> passive_joints_;
 
-    EthercatInterface ethercat_;
+    std::shared_ptr<EthercatInterface> ethercat_;
 };
 }

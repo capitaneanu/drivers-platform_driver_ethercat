@@ -9,10 +9,10 @@ static char cbuf[1024];
 
 using namespace platform_driver_ethercat;
 
-CanDeviceAtiFts::CanDeviceAtiFts(EthercatInterface& ethercat,
+CanDeviceAtiFts::CanDeviceAtiFts(std::shared_ptr<EthercatInterface> ethercat,
                                  unsigned int slave_id,
                                  std::string device_name)
-    : CanDevice(ethercat, slave_id, device_name),
+    : CanDevice(std::move(ethercat), slave_id, device_name),
       input_(NULL),
       output_(NULL),
       counts_per_force_(1),
@@ -77,15 +77,15 @@ bool CanDeviceAtiFts::configure()
 
     for (auto sdo_write : sdo_writes)
     {
-        success &= ethercat_.sdoWrite(
+        success &= ethercat_->sdoWrite(
             slave_id_, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
     }
 
     int force_unit;
     int torque_unit;
 
-    success &= ethercat_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x29, &force_unit);
-    success &= ethercat_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x2a, &torque_unit);
+    success &= ethercat_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x29, &force_unit);
+    success &= ethercat_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x2a, &torque_unit);
 
     ss << "Force unit of sensor " << device_name_ << " is " << force_unit;
     log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
@@ -95,9 +95,9 @@ bool CanDeviceAtiFts::configure()
     ss.str(""); ss.clear();
 
     success &=
-        ethercat_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x31, &counts_per_force_);
+        ethercat_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x31, &counts_per_force_);
     success &=
-        ethercat_.sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x32, &counts_per_torque_);
+        ethercat_->sdoRead(slave_id_, DictionaryObject::CALIBRATION, 0x32, &counts_per_torque_);
 
     if (success)
     {

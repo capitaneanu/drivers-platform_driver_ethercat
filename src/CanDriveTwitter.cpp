@@ -12,11 +12,11 @@ static char cbuf[1024];
 
 using namespace platform_driver_ethercat;
 
-CanDriveTwitter::CanDriveTwitter(EthercatInterface& ethercat,
+CanDriveTwitter::CanDriveTwitter(std::shared_ptr<EthercatInterface> ethercat,
                                  unsigned int slave_id,
                                  std::string name,
                                  DriveParams params)
-    : CanDevice(ethercat, slave_id, name),
+    : CanDevice(std::move(ethercat), slave_id, name),
       params_(params),
       input_(NULL),
       output_(NULL),
@@ -135,7 +135,7 @@ bool CanDriveTwitter::configure()
 
     for (auto sdo_write : sdo_writes)
     {
-        success &= ethercat_.sdoWrite(
+        success &= ethercat_->sdoWrite(
             slave_id_, sdo_write.index, sdo_write.subindex, sdo_write.fieldsize, sdo_write.data);
     }
 

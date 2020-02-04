@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 namespace platform_driver_ethercat
@@ -10,7 +11,7 @@ class EthercatInterface;
 class CanDevice
 {
   public:
-    CanDevice(EthercatInterface& ethercat, unsigned int slave_id, std::string device_name);
+    CanDevice(std::shared_ptr<EthercatInterface> ethercat, unsigned int slave_id, std::string device_name);
     virtual ~CanDevice() = 0;
 
     virtual bool configure() = 0;
@@ -26,7 +27,7 @@ class CanDevice
     std::string getDeviceName();
 
   protected:
-    EthercatInterface& ethercat_;
+    std::shared_ptr<EthercatInterface> ethercat_;
     unsigned int slave_id_;
     std::string device_name_;
 };

@@ -19,7 +19,7 @@ class CanDriveTwitter : public CanDevice
     /**
      * The constructor
      */
-    CanDriveTwitter(EthercatInterface& ethercat,
+    CanDriveTwitter(std::shared_ptr<EthercatInterface> ethercat,
                     unsigned int slave_id,
                     std::string name,
                     DriveParams params);
