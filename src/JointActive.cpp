@@ -6,7 +6,6 @@
 #include "Logging.hpp"
 #include <sstream>
 static std::stringstream ss;
-static char cbuf[1024];
 
 using namespace platform_driver_ethercat;
 
@@ -14,7 +13,7 @@ JointActive::JointActive(std::string name,
                          std::shared_ptr<CanDriveTwitter>& drive,
                          ActiveJointParams params,
                          bool enabled)
-    : Joint(name, drive, enabled), params_(params){};
+    : Joint(name, drive, enabled), params_(params) {}
 
 bool JointActive::commandPositionRad(double position_rad)
 {

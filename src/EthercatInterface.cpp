@@ -43,7 +43,7 @@ bool EthercatInterface::init()
             log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str().c_str());
             ss.str(""); ss.clear();
 
-            if (num_slaves_ != ec_slavecount)
+            if (num_slaves_ != (unsigned int) ec_slavecount)
             {
                 ss << ": Expected number of slaves (" << num_slaves_
                             << ") differs from number of slaves found (" << ec_slavecount << ")";
@@ -52,7 +52,7 @@ bool EthercatInterface::init()
                 return false;
             }
 
-            if (devices_.size() > ec_slavecount)
+            if (devices_.size() > (unsigned int) ec_slavecount)
             {
                 ss << ": Number of added devices ("
                             << devices_.size() << ") is greater than number of slaves found ("
@@ -67,7 +67,7 @@ bool EthercatInterface::init()
             {
                 unsigned int slave_id = device.first;
 
-                if (slave_id > ec_slavecount)
+                if (slave_id > (unsigned int) ec_slavecount)
                 {
                     ss << ": Slave id " << slave_id
                                 << " outside range";
@@ -241,8 +241,8 @@ bool EthercatInterface::sdoRead(uint16_t slave, uint16_t idx, uint8_t sub, int* 
               sub,
               wkc,
               2 * fieldsize,
-              data,
-              data);
+              *data,
+              *data);
     log(LogLevel::DEBUG, __PRETTY_FUNCTION__, cbuf);
 
     if (wkc == 1)
@@ -368,9 +368,11 @@ void EthercatInterface::pdoCycle()
                 }
             }
             if (!ec_group[currentgroup].docheckstate)
+            {
                 ss << ": All slaves resumed OPERATIONAL";
                 log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str().c_str());
                 ss.str(""); ss.clear();
+            }
         }
 
         //osal_usleep(1000);  // roughly 1000 Hz

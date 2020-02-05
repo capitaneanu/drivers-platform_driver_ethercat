@@ -8,7 +8,6 @@
 #include "Logging.hpp"
 #include <sstream>
 static std::stringstream ss;
-static char cbuf[1024];
 
 using namespace platform_driver_ethercat;
 
@@ -461,19 +460,25 @@ CanDriveTwitter::DriveState CanDriveTwitter::readDriveState()
                 return ST_NOT_READY_TO_SWITCH_ON;
             else
                 return ST_SWITCH_ON_DISABLED;
+            break;
         case 0x1:
             if (bit5 && !bit6) return ST_READY_TO_SWITCH_ON;
+            break;
         case 0x3:
             if (bit5 && !bit6) return ST_SWITCHED_ON;
+            break;
         case 0x7:
             if (bit5 && !bit6)
                 return ST_OPERATION_ENABLE;
             else if (!bit5 && !bit6)
                 return ST_QUICK_STOP_ACTIVE;
+            break;
         case 0x8:
             if (!bit6) return ST_FAULT;
+            break;
         case 0xf:
             if (!bit6) return ST_FAULT_REACTION_ACTIVE;
+            break;
     }
 
     ss << ": Drive " << device_name_
