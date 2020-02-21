@@ -85,6 +85,14 @@ bool PlatformDriverEthercat::initPlatform()
 
 bool PlatformDriverEthercat::startupPlatform()
 {
+    log(LogLevel::INFO, __PRETTY_FUNCTION__, "Starting up platform");
+
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+        return false;
+    }
+
     // Start all drives for enabled active joints in groups of 6
     auto joint_iterator = active_joints_.begin();
     while (joint_iterator != active_joints_.end())
@@ -140,6 +148,12 @@ bool PlatformDriverEthercat::startupPlatform()
 
 bool PlatformDriverEthercat::shutdownPlatform()
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+        return false;
+    }
+
     bool bRet = true;
     // shut down all motors
     for (auto& drive : can_drives_)
@@ -151,6 +165,12 @@ bool PlatformDriverEthercat::shutdownPlatform()
 
 bool PlatformDriverEthercat::resetPlatform()
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+        return false;
+    }
+
     bool bRetMotor = true;
     bool bRet = true;
 
@@ -173,43 +193,90 @@ bool PlatformDriverEthercat::resetPlatform()
 
 bool PlatformDriverEthercat::commandJointPositionRad(std::string joint_name, double position_rad)
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+        return false;
+    }
+
     return joints_.at(joint_name)->commandPositionRad(position_rad);
 }
 
 bool PlatformDriverEthercat::commandJointVelocityRadSec(std::string joint_name,
                                                         double velocity_rad_sec)
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+        return false;
+    }
+
     return joints_.at(joint_name)->commandVelocityRadSec(velocity_rad_sec);
 }
 
 bool PlatformDriverEthercat::commandJointTorqueNm(std::string joint_name, double torque_nm)
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+        return false;
+    }
+
     return joints_.at(joint_name)->commandTorqueNm(torque_nm);
 }
 
 bool PlatformDriverEthercat::readJointPositionRad(std::string joint_name, double& position_rad)
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+        return false;
+    }
+
     return joints_.at(joint_name)->readPositionRad(position_rad);
 }
 
 bool PlatformDriverEthercat::readJointVelocityRadSec(std::string joint_name,
                                                      double& velocity_rad_sec)
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+        return false;
+    }
+
     return joints_.at(joint_name)->readVelocityRadSec(velocity_rad_sec);
 }
 
 bool PlatformDriverEthercat::readJointTorqueNm(std::string joint_name, double& torque_nm)
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+        return false;
+    }
+
     return joints_.at(joint_name)->readTorqueNm(torque_nm);
 }
 
 bool PlatformDriverEthercat::readJointTempDegC(std::string joint_name, double& temp_deg_c)
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+        return false;
+    }
+
     return joints_.at(joint_name)->readTempDegC(temp_deg_c);
 }
 
 void PlatformDriverEthercat::readFtsForceN(std::string fts_name, double& fx, double& fy, double& fz)
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+    }
+
     Eigen::Vector3d force = can_fts_.at(fts_name)->readForceN();
 
     fx = force[0];
@@ -222,6 +289,11 @@ void PlatformDriverEthercat::readFtsTorqueNm(std::string fts_name,
                                              double& ty,
                                              double& tz)
 {
+    if (!ethercat_->isInit())
+    {
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, "Need to initialize EtherCAT interface first");
+    }
+
     Eigen::Vector3d torque = can_fts_.at(fts_name)->readTorqueNm();
 
     tx = torque[0];
