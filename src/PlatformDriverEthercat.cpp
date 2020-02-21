@@ -124,6 +124,12 @@ bool PlatformDriverEthercat::startupPlatform()
 
             if (!future.get())
             {
+                ss << "Could not start up all drives. Aborting startup.";
+                log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
+                ss.str(""); ss.clear();
+
+                shutdownPlatform();
+
                 return false;
             }
         }
