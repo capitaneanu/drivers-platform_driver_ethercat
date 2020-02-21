@@ -77,16 +77,8 @@ bool PlatformDriverEthercat::initPlatform()
         return false;
     }
 
-    if (!startupPlatform())
-    {
-        ss << ": Could not start up drives";
-        log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
-        ss.str(""); ss.clear();
-        return false;
-    }
-
-    ss << ": Platform init success";
-    log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+    ss << "Platform successfully initialized";
+    log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str());
     ss.str(""); ss.clear();
     return true;
 }
