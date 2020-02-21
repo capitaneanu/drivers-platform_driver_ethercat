@@ -25,39 +25,57 @@ EthercatInterface::~EthercatInterface() { close(); }
 
 bool EthercatInterface::init()
 {
-    if (isInit()) return true;
+    ss << "Initializing EtherCAT interface";
+    log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str());
+    ss.str(""); ss.clear();
+
+    if (isInit())
+    {
+        ss << "EtherCAT interface already initialized";
+        log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str());
+        ss.str(""); ss.clear();
+        return true;
+    }
 
     is_initialized_ = false;
 
     /* initialise SOEM, bind socket to ifname */
     if (ec_init(interface_address_.c_str()))
     {
-        ss << ": Initialization on interface "
+        ss << "Initialization on ethernet interface "
                    << interface_address_.c_str() << " succeeded";
-        log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str().c_str());
+        log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str());
         ss.str(""); ss.clear();
         /* find and auto-config slaves */
         if (ec_config_init(FALSE) > 0)
         {
-            ss << ": " << ec_slavecount << " slaves found";
-            log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str().c_str());
+            ss << "" << ec_slavecount << " slaves found";
+            log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str());
             ss.str(""); ss.clear();
 
             if (num_slaves_ != (unsigned int) ec_slavecount)
             {
-                ss << ": Expected number of slaves (" << num_slaves_
+                ss << "Expected number of slaves (" << num_slaves_
                             << ") differs from number of slaves found (" << ec_slavecount << ")";
-                log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+                log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
+                ss.str(""); ss.clear();
+
+                ss << "Failed to initialize EtherCAT interface";
+                log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
                 ss.str(""); ss.clear();
                 return false;
             }
 
             if (devices_.size() > (unsigned int) ec_slavecount)
             {
-                ss << ": Number of added devices ("
+                ss << "Number of added devices ("
                             << devices_.size() << ") is greater than number of slaves found ("
                             << ec_slavecount << ")";
-                log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+                log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
+                ss.str(""); ss.clear();
+
+                ss << "Failed to initialize EtherCAT interface";
+                log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
                 ss.str(""); ss.clear();
                 return false;
             }
@@ -69,9 +87,13 @@ bool EthercatInterface::init()
 
                 if (slave_id > (unsigned int) ec_slavecount)
                 {
-                    ss << ": Slave id " << slave_id
+                    ss << "Slave id " << slave_id
                                 << " outside range";
-                    log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+                    log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
+                    ss.str(""); ss.clear();
+
+                    ss << "Failed to initialize EtherCAT interface";
+                    log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
                     ss.str(""); ss.clear();
                     return false;
                 }
@@ -99,19 +121,19 @@ bool EthercatInterface::init()
                 device.second->setOutputPdo(ec_slave[slave_id].outputs);
             }
 
-            ss << ": Slaves mapped, state to SAFE_OP";
-            log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+            ss << "Slaves mapped, state to SAFE_OP";
+            log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str());
             ss.str(""); ss.clear();
             /* wait for all slaves to reach SAFE_OP state */
             ec_statecheck(0, EC_STATE_SAFE_OP, EC_TIMEOUTSTATE * 4);
 
             expected_wkc_ = (ec_group[0].outputsWKC * 2) + ec_group[0].inputsWKC;
-            ss << ": Calculated workcounter " << expected_wkc_;
-            log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+            ss << "Calculated workcounter " << expected_wkc_;
+            log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str());
             ss.str(""); ss.clear();
 
-            ss << ": Request operational state for all slaves";
-            log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+            ss << "Request operational state for all slaves";
+            log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str());
             ss.str(""); ss.clear();
             ec_slave[0].state = EC_STATE_OPERATIONAL;
             /* send one valid process data to make outputs in slaves happy*/
@@ -130,8 +152,8 @@ bool EthercatInterface::init()
 
             if (ec_slave[0].state == EC_STATE_OPERATIONAL)
             {
-                ss << ": Operational state reached for all slaves";
-                log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+                ss << "Operational state reached for all slaves";
+                log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str());
                 ss.str(""); ss.clear();
 
                 /* create thread for pdo cycle */
@@ -139,12 +161,16 @@ bool EthercatInterface::init()
                 ethercat_thread_ = std::thread(&EthercatInterface::pdoCycle, this);
 
                 is_initialized_ = true;
+
+                ss << "EtherCAT interface successfully initialized";
+                log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str());
+                ss.str(""); ss.clear();
                 return true;
             }
             else
             {
-                ss << ": Not all slaves reached operational state";
-                log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+                ss << "Not all slaves reached operational state";
+                log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
                 ss.str(""); ss.clear();
                 is_initialized_ = false;
 
@@ -165,23 +191,36 @@ bool EthercatInterface::init()
                 }
 
                 close();
+
+                ss << "Failed to initialize EtherCAT interface";
+                log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
+                ss.str(""); ss.clear();
                 return false;
             }
         }
         else
         {
-            ss << ": No slaves found";
-            log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+            ss << "No slaves found";
+            log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
             ss.str(""); ss.clear();
+
             close();
+
+            ss << "Failed to initialize EtherCAT interface";
+            log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
+            ss.str(""); ss.clear();
             return false;
         }
     }
     else
     {
-        ss << ": Initialization on interface "
+        ss << "Initialization on ethernet interface "
                     << interface_address_.c_str() << " not succeeded";
-        log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
+        ss.str(""); ss.clear();
+
+        ss << "Failed to initialize EtherCAT interface";
+        log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
         ss.str(""); ss.clear();
         return false;
     }
@@ -191,8 +230,8 @@ void EthercatInterface::close()
 {
     if (isInit())
     {
-        ss << ": Request init state for all slaves";
-        log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str().c_str());
+        ss << "Request init state for all slaves";
+        log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str());
         ss.str(""); ss.clear();
         ec_slave[0].state = EC_STATE_INIT;
         /* request INIT state for all slaves */
@@ -205,8 +244,8 @@ void EthercatInterface::close()
         is_initialized_ = false;
     }
 
-    ss << ": Close socket";
-    log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str().c_str());
+    ss << "Close socket";
+    log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str());
     ss.str(""); ss.clear();
     ec_close();
 }
@@ -218,8 +257,8 @@ bool EthercatInterface::addDevice(std::shared_ptr<CanDevice> device)
     if (isInit())
     {
         ss
-                   << ": EtherCAT interface already initialized, device cannot be added afterwards";
-        log(LogLevel::WARN, __PRETTY_FUNCTION__, ss.str().c_str());
+                   << "EtherCAT interface already initialized, device cannot be added afterwards";
+        log(LogLevel::WARN, __PRETTY_FUNCTION__, ss.str());
         ss.str(""); ss.clear();
         return false;
     }
@@ -303,18 +342,18 @@ void EthercatInterface::pdoCycle()
                     ec_group[currentgroup].docheckstate = TRUE;
                     if (ec_slave[slave].state == (EC_STATE_SAFE_OP + EC_STATE_ERROR))
                     {
-                        ss << ": Slave " << slave
+                        ss << "Slave " << slave
                                     << " is in SAFE_OP + ERROR, attempting ack";
-                        log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+                        log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
                         ss.str(""); ss.clear();
                         ec_slave[slave].state = (EC_STATE_SAFE_OP + EC_STATE_ACK);
                         ec_writestate(slave);
                     }
                     else if (ec_slave[slave].state == EC_STATE_SAFE_OP)
                     {
-                        ss << ": Slave " << slave
+                        ss << "Slave " << slave
                                    << " is in SAFE_OP, change to OPERATIONAL";
-                        log(LogLevel::WARN, __PRETTY_FUNCTION__, ss.str().c_str());
+                        log(LogLevel::WARN, __PRETTY_FUNCTION__, ss.str());
                         ss.str(""); ss.clear();
                         ec_slave[slave].state = EC_STATE_OPERATIONAL;
                         ec_writestate(slave);
@@ -326,9 +365,9 @@ void EthercatInterface::pdoCycle()
                         if (ec_reconfig_slave(slave, EC_TIMEOUTMON))
                         {
                             ec_slave[slave].islost = FALSE;
-                            ss << ": Slave " << slave
+                            ss << "Slave " << slave
                                         << " reconfigured";
-                            log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+                            log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str());
                             ss.str(""); ss.clear();
                         }
                     }
@@ -339,8 +378,8 @@ void EthercatInterface::pdoCycle()
                         if (ec_slave[slave].state == EC_STATE_NONE)
                         {
                             ec_slave[slave].islost = TRUE;
-                            ss << ": Slave " << slave << " lost";
-                            log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+                            ss << "Slave " << slave << " lost";
+                            log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
                             ss.str(""); ss.clear();
                         }
                     }
@@ -352,25 +391,25 @@ void EthercatInterface::pdoCycle()
                         if (ec_recover_slave(slave, EC_TIMEOUTMON))
                         {
                             ec_slave[slave].islost = FALSE;
-                            ss << ": Slave " << slave
+                            ss << "Slave " << slave
                                         << " recovered";
-                            log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+                            log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str());
                             ss.str(""); ss.clear();
                         }
                     }
                     else
                     {
                         ec_slave[slave].islost = FALSE;
-                        ss << ": Slave " << slave << " found";
-                        log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+                        ss << "Slave " << slave << " found";
+                        log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str());
                         ss.str(""); ss.clear();
                     }
                 }
             }
             if (!ec_group[currentgroup].docheckstate)
             {
-                ss << ": All slaves resumed OPERATIONAL";
-                log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str().c_str());
+                ss << "All slaves resumed OPERATIONAL";
+                log(LogLevel::INFO, __PRETTY_FUNCTION__, ss.str());
                 ss.str(""); ss.clear();
             }
         }
@@ -378,6 +417,6 @@ void EthercatInterface::pdoCycle()
         //osal_usleep(1000);  // roughly 1000 Hz
         osal_usleep(5000);  // roughly 200 Hz
         //osal_usleep(10000);  // roughly 100 Hz
-        //LOG_DEBUG_S << __PRETTY_FUNCTION__ << ": " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count(); 
+        //LOG_DEBUG_S << __PRETTY_FUNCTION__ << "" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count(); 
     }
 }

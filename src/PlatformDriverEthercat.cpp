@@ -65,14 +65,14 @@ void PlatformDriverEthercat::addPassiveJoint(std::string name, std::string drive
 
 bool PlatformDriverEthercat::initPlatform()
 {
-    ss << ": Initializing EtherCAT interface";
-    log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str().c_str());
+    ss << "Initializing platform";
+    log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str());
     ss.str(""); ss.clear();
 
     if (!ethercat_->init())
     {
-        ss << ": Could not initialize EtherCAT interface";
-        log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+        ss << "Failed to initialize platform";
+        log(LogLevel::DEBUG, __PRETTY_FUNCTION__, ss.str());
         ss.str(""); ss.clear();
         return false;
     }
@@ -163,7 +163,7 @@ bool PlatformDriverEthercat::resetPlatform()
         if (!bRetMotor)
         {
             ss << "Resetting of Motor " << drive.second->getDeviceName() << " failed";
-            log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str().c_str());
+            log(LogLevel::ERROR, __PRETTY_FUNCTION__, ss.str());
             ss.str(""); ss.clear();
         }
 
