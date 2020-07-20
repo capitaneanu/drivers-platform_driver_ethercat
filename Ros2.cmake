@@ -1,4 +1,4 @@
-project(platform_driver_ethercat_lib)
+project(platform_driver_ethercat)
 
 add_definitions(-DROS2)
 
