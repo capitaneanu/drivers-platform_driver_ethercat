@@ -1,5 +1,3 @@
-project(platform_driver_ethercat)
-
 find_package(Rock)
 rock_init(${PROJECT_NAME} 0.1)
 rock_standard_layout()

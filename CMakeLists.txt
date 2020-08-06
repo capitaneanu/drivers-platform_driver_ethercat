@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
+project(platform_driver_ethercat)
 
 if (DEFINED ENV{ROCK_PREFIX})
     include(Rock.cmake)

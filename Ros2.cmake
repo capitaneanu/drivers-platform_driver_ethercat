@@ -1,5 +1,3 @@
-project(platform_driver_ethercat)
-
 add_definitions(-DROS2)
 
 # Default to C++14
