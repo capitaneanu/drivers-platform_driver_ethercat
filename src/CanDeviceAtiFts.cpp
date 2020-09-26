@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 
 #include "CanDeviceAtiFts.h"
 #include "EthercatInterface.h"

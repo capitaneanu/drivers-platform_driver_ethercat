@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <bitset>
 #include <iostream>
+#include <vector>
 
 #include "CanDriveTwitter.h"
 #include "EthercatInterface.h"
